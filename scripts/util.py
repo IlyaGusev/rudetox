@@ -6,10 +6,11 @@ import numpy as np
 import torch
 
 
-def read_jsonl(file_path):
+def read_jsonl(file_path, sample_rate=1.0):
     with open(file_path) as r:
         for line in r:
-            yield json.loads(line)
+            if random.random() <= sample_rate:
+                yield json.loads(line)
 
 
 def write_jsonl(records, file_path):

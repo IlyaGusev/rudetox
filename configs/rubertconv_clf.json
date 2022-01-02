@@ -1,0 +1,21 @@
+{
+    "batch_size": 32,
+    "learning_rate": 0.00002,
+    "num_train_epochs": 3,
+    "gradient_accumulation_steps": 4,
+    "max_tokens": 200,
+    "logging_steps": 50,
+    "save_steps": 200,
+    "eval_steps": 200,
+    "warmup_steps": 200,
+    "model_name": "DeepPavlov/rubert-base-cased-conversational",
+    "num_labels": 2,
+    "id2label": {
+        "0": "neutral",
+        "1": "toxic"
+    },
+    "label2id": {
+        "neutral": 0,
+        "toxic": 1
+    }
+}
