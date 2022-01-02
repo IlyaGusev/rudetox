@@ -3,6 +3,7 @@
 DETOX_INPUT_FILE="../data/russe_detox_2022/train.tsv";
 OK_INPUT_FILE="../data/ok.ft";
 CH_INPUT_FILE="../data/2ch.csv";
+PERSONA_INPUT_FILE="../data/TlkPersonaChatRus/dialogues.tsv"
 VOCAB_FILE="../data/bad_vocab.txt";
 
 OUTPUT_FILE="../data/clf_all.jsonl";
@@ -14,6 +15,7 @@ DETOX_TEMP_FILE=$(mktemp);
 OK_TEMP_FILE=$(mktemp);
 CH_TEMP_FILE=$(mktemp);
 OUTPUT_TEMP_FILE=$(mktemp);
+PERSONA_TEMP_FILE=$(mktemp);
 
 python3.9 -m clf.converters.detox_to_clf_jsonl \
     --input-file $DETOX_INPUT_FILE \
@@ -24,8 +26,11 @@ python3.9 -m clf.converters.ok_to_clf_jsonl \
 python3.9 -m clf.converters.2ch_to_clf_jsonl \
     --input-file $CH_INPUT_FILE \
     --output-file $CH_TEMP_FILE;
+python3.9 -m clf.converters.persona_to_clf_jsonl \
+    --input-file $PERSONA_INPUT_FILE \
+    --output-file $PERSONA_TEMP_FILE;
 python3.9 -m clf.merge_all \
-    $DETOX_TEMP_FILE $OK_TEMP_FILE $CH_TEMP_FILE \
+    $DETOX_TEMP_FILE $OK_TEMP_FILE $CH_TEMP_FILE $PERSONA_TEMP_FILE \
     --output-file $OUTPUT_TEMP_FILE;
 python3.9 -m clf.clean \
     --input-path $OUTPUT_TEMP_FILE \

@@ -10,12 +10,16 @@ model.eval()
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 
-#sample = "Горит восток зарёю новой! Говно, залупа, пенис, хер, давалка, хуй, блядина, хороший или плохой человек"
-sample = "Нет худа без добра. Говно, залупа, пенис, хер, давалка, хуй, блядина, хороший или плохой человек"
+sample = """Горит восток зарёю новой!
+Говно, залупа, пенис, хер, давалка, хуй, блядина.
+Уж на равнине по холмам
+Головка, шлюха, жопа, член, еблан, петух... мудила"""
+#sample = "Нет худа без добра. Говно, залупа, пенис, хер, давалка, хуй, блядина, хороший или плохой человек"
 inputs = tokenizer(sample, add_special_tokens=True, return_tensors="pt")
 logits = model(**inputs).logits.squeeze(0)
 
-mask = torch.softmax(logits, dim=1)[:, 1] > 0.3
+mask = torch.argmax(logits, dim=1).tolist()
+#mask = torch.softmax(logits, dim=1)[:, 1] > 0.3
 
 for token_id, mask_elem in zip(inputs["input_ids"].squeeze(0), mask):
     print(tokenizer.convert_ids_to_tokens([token_id])[0], int(mask_elem))
