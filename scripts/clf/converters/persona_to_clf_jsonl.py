@@ -32,6 +32,7 @@ class DialogueParser(HTMLParser):
         self.lines = []
         return dialogue
 
+
 def main(
     input_file,
     output_file
@@ -54,6 +55,7 @@ def main(
 
             def get_user(line):
                 return 1 if line.startswith(user1_start) else 2
+
             def clean_line(line):
                 return line.replace(user1_start, "").replace(user2_start, "").replace("\n", " ").strip()
 

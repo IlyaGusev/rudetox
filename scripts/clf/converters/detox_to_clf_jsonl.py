@@ -24,11 +24,11 @@ def main(
                 "source": "detox"
             })
             for neutral in neutrals:
-                 records.append({
-                     "text": neutral,
-                     "label": 0,
-                     "source": "detox"
-                 })
+                records.append({
+                    "text": neutral,
+                    "label": 0,
+                    "source": "detox"
+                })
     write_jsonl(records, output_file)
 
 

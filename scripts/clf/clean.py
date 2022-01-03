@@ -22,7 +22,6 @@ def main(
     for record in records:
         label = record["label"]
         text = record["text"]
-        source = record["source"]
         tokens = [t.text.lower() for t in razdel.tokenize(text)]
         has_bad_token = False
         for token in tokens:

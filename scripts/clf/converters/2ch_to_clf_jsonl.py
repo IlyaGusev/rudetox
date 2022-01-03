@@ -4,6 +4,7 @@ import json
 
 from util import write_jsonl
 
+
 def main(
     input_file,
     output_file

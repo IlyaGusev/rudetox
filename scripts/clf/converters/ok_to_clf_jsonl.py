@@ -3,6 +3,7 @@ import json
 
 from util import write_jsonl
 
+
 def main(
     input_file,
     output_file
@@ -14,8 +15,8 @@ def main(
             labels = line.split(" ")[0].split(",")
             text = " ".join(line.split(" ")[1:]).strip()
             label = 0
-            for l in labels:
-                if l in bad_labels:
+            for lbl in labels:
+                if lbl in bad_labels:
                     label = 1
             records.append({
                 "text": text,

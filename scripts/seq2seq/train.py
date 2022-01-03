@@ -7,7 +7,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, Trainer, TrainingArguments, logging
 from transformers import EncoderDecoderModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 
-from dataset import SummarySeq2SeqDataset, SummaryLMDataset
+from seq2seq.dataset import SummarySeq2SeqDataset, SummaryLMDataset
 from util import read_jsonl, set_random_seed, fix_tokenizer
 
 

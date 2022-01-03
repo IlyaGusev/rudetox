@@ -3,7 +3,7 @@ import argparse
 import torch
 import razdel
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForCausalLM, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification
 
 from util import read_jsonl, gen_batch, set_random_seed
 
@@ -34,6 +34,7 @@ def predict(
     if clf_name:
         clf_tokenizer = AutoTokenizer.from_pretrained(clf_name)
         clf_model = AutoModelForSequenceClassification.from_pretrained(clf_name).to(device)
+
         def infer_clf(text):
             input_ids = clf_tokenizer.encode(text, return_tensors="pt").to(device)
             clf_prob = clf_model(input_ids).logits[0][0].item()

@@ -75,13 +75,8 @@ def main(
     )
 
     test_dataset = TextDataset(test_records)
-    #y_pred, scores = pipe_predict(test_texts, pipe)
-    #for r, p, score in zip(test_records, y_pred, scores):
-    #    r["prediction"] = p
-    #    r["score"] = score
 
     suite = TestSuite()
-
     suite.add(INV(
         **Perturb.perturb(test_dataset, fix_yo, keep_original=True),
         name="ё -> е",
@@ -106,7 +101,6 @@ def main(
         capability="Robustness",
         description=""
     ))
-
 
     suite.run(lambda x: pipe_predict(x, pipe), overwrite=True)
     suite.summary()

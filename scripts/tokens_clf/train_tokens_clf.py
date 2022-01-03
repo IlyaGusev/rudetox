@@ -93,7 +93,7 @@ def main(
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         logging_steps=logging_steps,
-        save_steps=eval_steps,
+        save_steps=save_steps,
         eval_steps=eval_steps,
         warmup_steps=warmup_steps,
         learning_rate=learning_rate,

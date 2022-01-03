@@ -77,9 +77,9 @@ def pipe_predict(data, pipe):
     y_pred, scores = [], []
     if isinstance(raw_preds[0], list):
         for sample in raw_preds:
-            l = max([s["index"] for s in sample]) + 1
-            sample_y_pred = [-1 for _ in range(l)]
-            sample_y_scores = [-100.0 for _ in range(l)]
+            length = max([s["index"] for s in sample]) + 1
+            sample_y_pred = [-1 for _ in range(length)]
+            sample_y_scores = [-100.0 for _ in range(length)]
             for s in sample:
                 sample_y_pred[s["index"]] = label2id[s["entity"]]
                 sample_y_scores[s["index"]] = s["score"]
