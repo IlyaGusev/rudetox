@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 import torch
+from tqdm import tqdm
 
 
 def read_jsonl(file_path, sample_rate=1.0):
@@ -68,3 +69,11 @@ def fix_tokenizer(tokenizer):
     print("UNK: ", tokenizer.unk_token_id, tokenizer.unk_token)
     print("SEP: ", tokenizer.sep_token_id, tokenizer.sep_token)
     return tokenizer
+
+
+def pipe_predict(data, pipe):
+    raw_preds = pipe(data, batch_size=64)
+    label2id = pipe.model.config.label2id
+    y_pred = np.array([label2id[sample["label"]] for sample in raw_preds])
+    scores = np.array([sample["score"] for sample in raw_preds])
+    return y_pred, scores

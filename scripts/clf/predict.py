@@ -6,17 +6,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipe
 from sklearn.metrics import classification_report
 from tqdm import tqdm
 
-from util import read_jsonl, gen_batch
-
-
-def pipe_predict(data, pipe, batch_size=64):
-    raw_preds = []
-    for batch in tqdm(gen_batch(data, batch_size)):
-        raw_preds += pipe(batch)
-    label2id = pipe.model.config.label2id
-    y_pred = np.array([label2id[sample["label"]] for sample in raw_preds])
-    scores = np.array([sample["score"] for sample in raw_preds])
-    return y_pred, scores
+from util import read_jsonl, pipe_predict
 
 
 def main(
@@ -33,13 +23,13 @@ def main(
 
     test_records = list(read_jsonl(test_path, sample_rate))
     pipe = pipeline("text-classification", model=model, tokenizer=tokenizer, framework="pt", device=device_num)
-    y_pred, _ = pipe_predict([r["text"][:512] for r in test_records], pipe)
+    y_pred, scores = pipe_predict([r["text"][:512] for r in test_records], pipe)
     y_true = [r["label"] for r in test_records]
 
     print("Errors:")
-    for record, label, pred in zip(test_records, y_true, y_pred):
+    for record, label, pred, score in zip(test_records, y_true, y_pred, scores):
         if label != pred:
-            print(record["text"], label, pred)
+            print(record["text"], label, pred, score)
 
     print(classification_report(y_true, y_pred, digits=3))
 
