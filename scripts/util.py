@@ -74,6 +74,18 @@ def fix_tokenizer(tokenizer):
 def pipe_predict(data, pipe):
     raw_preds = pipe(data, batch_size=64)
     label2id = pipe.model.config.label2id
-    y_pred = np.array([label2id[sample["label"]] for sample in raw_preds])
-    scores = np.array([sample["score"] for sample in raw_preds])
+    y_pred, scores = [], []
+    if isinstance(raw_preds[0], list):
+        for sample in raw_preds:
+            l = max([s["index"] for s in sample]) + 1
+            sample_y_pred = [-1 for _ in range(l)]
+            sample_y_scores = [-100.0 for _ in range(l)]
+            for s in sample:
+                sample_y_pred[s["index"]] = label2id[s["entity"]]
+                sample_y_scores[s["index"]] = s["score"]
+            y_pred.append(sample_y_pred)
+            scores.append(sample_y_scores)
+    else:
+        y_pred = np.array([label2id[sample["label"]] for sample in raw_preds])
+        scores = np.array([sample["score"] for sample in raw_preds])
     return y_pred, scores
