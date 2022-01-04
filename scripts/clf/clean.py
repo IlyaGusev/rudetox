@@ -21,6 +21,7 @@ def main(
     non_toxic_bad_words_count = 0
     for record in records:
         label = record["label"]
+        record["text"] = record["text"][:1000]
         text = record["text"]
         tokens = [t.text.lower() for t in razdel.tokenize(text)]
         has_bad_token = False
@@ -32,6 +33,11 @@ def main(
             continue
         filtered_records.append(record)
     print("Non toxic with bad words:", non_toxic_bad_words_count)
+
+    print("Before undup:", len(filtered_records))
+    filtered_records = list({r["text"]: r for r in filtered_records}.values())
+
+    print("After undup:", len(filtered_records))
     write_jsonl(filtered_records, output_path)
 
 

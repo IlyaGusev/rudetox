@@ -17,9 +17,7 @@ def main(
     random.shuffle(records)
 
     source_records = defaultdict(list)
-    train_records = []
-    val_records = []
-    test_records = []
+    train_records, val_records, test_records = [], [], []
     for record in records:
         source = record["source"]
         source_records[source].append(record)

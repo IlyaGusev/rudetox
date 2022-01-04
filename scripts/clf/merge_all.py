@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from util import read_jsonl, write_jsonl
 
@@ -9,6 +10,7 @@ def main(
 ):
     records = []
     for f in input_files:
+        assert os.path.exists(f)
         records += read_jsonl(f)
     write_jsonl(records, output_file)
 
