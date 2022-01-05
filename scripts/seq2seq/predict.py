@@ -3,9 +3,10 @@ import argparse
 import torch
 import razdel
 from tqdm import tqdm
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 from util import read_jsonl, gen_batch, set_random_seed
+from ranker import Ranker
 
 
 def predict(
@@ -21,8 +22,7 @@ def predict(
     num_beams,
     num_return_sequences,
     early_stopping,
-    source_field,
-    clf_name
+    source_field
 ):
     set_random_seed(seed)
     tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
@@ -31,17 +31,12 @@ def predict(
     model = model.to(device)
 
     records = list(read_jsonl(input_file))
-    if clf_name:
-        clf_tokenizer = AutoTokenizer.from_pretrained(clf_name)
-        clf_model = AutoModelForSequenceClassification.from_pretrained(clf_name).to(device)
-
-        def infer_clf(text):
-            input_ids = clf_tokenizer.encode(text, return_tensors="pt").to(device)
-            clf_prob = clf_model(input_ids).logits[0][0].item()
-            return clf_prob
+    ranker = Ranker()
 
     summaries = []
-    count_clf_ok = 0
+    count_style_ok = 0
+    count_fluency_ok = 0
+    sum_sim = 0.0
     for batch in tqdm(gen_batch(records, batch_size)):
         texts = [r[source_field] for r in batch]
         input_ids = tokenizer(
@@ -64,25 +59,16 @@ def predict(
         output_ids = output_ids.reshape((len(batch), num_return_sequences, output_ids.size(1)))
 
         for text, sample_output_ids in zip(texts, output_ids):
-            if clf_name:
-                best_summary = None
-                max_clf_prob = -100.0
-                for ids in sample_output_ids:
-                    summary = tokenizer.decode(ids, skip_special_tokens=True)
-                    clf_prob = infer_clf(summary)
-                    if clf_prob > max_clf_prob:
-                        max_clf_prob = clf_prob
-                        best_summary = summary
-                if max_clf_prob > 0.0:
-                    count_clf_ok += 1
-                text_clf_prob = infer_clf(text)
-                summaries.append(best_summary if text_clf_prob < 0.0 else text)
-                continue
-            summary = tokenizer.decode(sample_output_ids[0], skip_special_tokens=True)
-            summaries.append(summary)
+            targets = [tokenizer.decode(ids, skip_special_tokens=True) for ids in sample_output_ids]
+            best_target, scores = ranker(text, targets)
+            count_style_ok += scores["style"]
+            count_fluency_ok += scores["fluency"]
+            sum_sim += scores["sim"]
+            summaries.append(best_target)
 
-    if clf_name:
-        print(count_clf_ok / len(summaries))
+    print("Style:", count_style_ok / len(summaries))
+    print("Fluency:", count_fluency_ok / len(summaries))
+    print("Sim:", sum_sim / len(summaries))
 
     with open(output_file, "w") as w:
         for s in summaries:
@@ -104,6 +90,5 @@ if __name__ == "__main__":
     parser.add_argument("--num-return-sequences", type=int, default=1)
     parser.add_argument("--early-stopping", action="store_true", default=False)
     parser.add_argument("--source-field", type=str, default="text")
-    parser.add_argument("--clf-name", type=str, default=None)
     args = parser.parse_args()
     predict(**vars(args))

@@ -12,19 +12,27 @@ from checklist.perturb import Perturb
 from util import read_jsonl, pipe_predict
 
 
-def fix_yo(x):
+def replace_yo(x):
     if "ё" not in x:
         return None
     return x.replace("ё", "е")
 
 
-def fix_exclamation(x):
+def rm_exclamation(x):
     if "!" not in x:
         return None
     return x.replace("!", "")
 
 
-def fix_question(x):
+def add_exclamation(x):
+    if "!" in x:
+        return None
+    if x[-1] == ".":
+        return x[:-1] + "!"
+    return x + "!"
+
+
+def rm_question(x):
     if "?" not in x:
         return None
     return x.replace("?", "")
@@ -104,14 +112,20 @@ def main(
 
     suite = TestSuite()
     suite.add(INV(
-        **Perturb.perturb(test_dataset, fix_yo, keep_original=True),
+        **Perturb.perturb(test_dataset, replace_yo, keep_original=True),
         name="ё -> е",
         capability="Robustness",
         description=""
     ))
     suite.add(INV(
-        **Perturb.perturb(test_dataset, fix_exclamation, keep_original=True),
+        **Perturb.perturb(test_dataset, rm_exclamation, keep_original=True),
         name="rm !",
+        capability="Robustness",
+        description=""
+    ))
+    suite.add(INV(
+        **Perturb.perturb(test_dataset, add_exclamation, keep_original=True),
+        name="add !",
         capability="Robustness",
         description=""
     ))
@@ -122,7 +136,7 @@ def main(
         description=""
     ))
     suite.add(INV(
-        **Perturb.perturb(test_dataset, fix_question, keep_original=True),
+        **Perturb.perturb(test_dataset, rm_question, keep_original=True),
         name="rm ?",
         capability="Robustness",
         description=""
