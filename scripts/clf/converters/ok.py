@@ -1,7 +1,7 @@
 import argparse
 import json
 
-from util import write_jsonl
+from util.io import write_jsonl
 
 
 def main(

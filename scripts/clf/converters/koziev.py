@@ -4,7 +4,7 @@ import re
 
 from tqdm import tqdm
 
-from util import write_jsonl
+from util.io import write_jsonl
 
 
 def remove_punct(s):

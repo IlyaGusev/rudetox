@@ -1,6 +1,8 @@
 import torch
 from transformers import AutoModelForSequenceClassification, AutoModel, AutoTokenizer
 
+from util.dl import run_clf
+
 STYLE_MODEL = "SkolkovoInstitute/russian_toxicity_classifier"
 MEANING_MODEL = "cointegrated/LaBSE-en-ru"
 FLUENCY_MODEL = "SkolkovoInstitute/rubert-base-corruption-detector"
@@ -13,11 +15,13 @@ class Ranker:
         style_model_name=STYLE_MODEL,
         meaning_model_name=MEANING_MODEL,
         fluency_model_name=FLUENCY_MODEL,
-        device=DEVICE
+        device=DEVICE,
+        good_style_label=0
     ):
         self.style_model = AutoModelForSequenceClassification.from_pretrained(style_model_name)
         self.style_model = self.style_model.to(device)
         self.style_tokenizer = AutoTokenizer.from_pretrained(style_model_name)
+        self.good_style_label = good_style_label
 
         self.meaning_model = AutoModel.from_pretrained(meaning_model_name)
         self.meaning_model = self.meaning_model.to(device)
@@ -42,36 +46,24 @@ class Ranker:
         embeddings = torch.nn.functional.normalize(embeddings)
         return embeddings
 
-    @staticmethod
-    def run_clf(texts, tokenizer, model):
-        inputs = tokenizer(
-            texts,
-            return_tensors="pt",
-            padding=True,
-            truncation=True
-        ).to(model.device)
-        logits = model(**inputs).logits
-        labels = torch.argmax(logits, dim=1)
-        return labels
-
     def eval_style(self, texts):
-        return self.run_clf(texts, self.style_tokenizer, self.style_model)
+        return run_clf(texts, self.style_tokenizer, self.style_model)
 
     def eval_fluency(self, texts):
-        return self.run_clf(texts, self.fluency_tokenizer, self.fluency_model)
+        return run_clf(texts, self.fluency_tokenizer, self.fluency_model)
 
     def __call__(self, source, targets):
-        toxic_labels = self.eval_style(targets)
-        non_toxic_targets = [t for l, t in zip(toxic_labels, targets) if l == 0]
-        has_non_toxic = len(non_toxic_targets) != 0
-        if not has_non_toxic:
-            non_toxic_targets = targets
+        style_labels = self.eval_style(targets)
+        good_style_targets = [t for l, t in zip(style_labels, targets) if l == self.good_style_label]
+        has_good_style = len(good_style_targets) != 0
+        if not has_good_style:
+            good_style_targets = targets
 
-        fluency_labels = self.eval_fluency(non_toxic_targets)
-        fluent_targets = [t for l, t in zip(fluency_labels, non_toxic_targets) if l == 1]
+        fluency_labels = self.eval_fluency(good_style_targets)
+        fluent_targets = [t for l, t in zip(fluency_labels, good_style_targets) if l == 1]
         has_fluent = len(fluent_targets) != 0
         if not has_fluent:
-            fluent_targets = non_toxic_targets
+            fluent_targets = good_style_targets
 
         targets = fluent_targets
         sources = [source for _ in range(len(targets))]
@@ -79,9 +71,9 @@ class Ranker:
         target_embeddings = self.calc_embedding(targets, self.meaning_tokenizer, self.meaning_model)
         scores = self.cos(source_embeddings, target_embeddings)
         max_score, best_index = torch.max(scores, 0)
-        info = {
-            "style": int(has_non_toxic),
+        metrics = {
+            "style": int(has_good_style),
             "fluency": int(has_fluent),
             "sim": max_score.item()
         }
-        return targets[best_index], info
+        return targets[best_index], metrics

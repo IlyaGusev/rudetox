@@ -3,7 +3,7 @@ import csv
 import copy
 from html.parser import HTMLParser
 
-from util import write_jsonl
+from util.io import write_jsonl
 
 
 class DialogueParser(HTMLParser):

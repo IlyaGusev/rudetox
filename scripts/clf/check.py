@@ -9,7 +9,8 @@ from checklist.test_types import MFT, INV, DIR
 from checklist.test_suite import TestSuite
 from checklist.perturb import Perturb
 
-from util import read_jsonl, pipe_predict
+from util.io import read_jsonl
+from util.dl import pipe_predict
 
 
 def replace_yo(x):

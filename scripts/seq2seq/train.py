@@ -8,7 +8,8 @@ from transformers import AutoTokenizer, Trainer, TrainingArguments, logging
 from transformers import EncoderDecoderModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 
 from seq2seq.dataset import SummarySeq2SeqDataset, SummaryLMDataset
-from util import read_jsonl, set_random_seed, fix_tokenizer
+from util.io import read_jsonl
+from util.dl import set_random_seed, fix_tokenizer
 
 
 def train(

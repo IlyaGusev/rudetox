@@ -1,17 +1,20 @@
 import argparse
+import json
 
 import torch
 import razdel
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-from util import read_jsonl, gen_batch, set_random_seed
+from util.io import read_jsonl, write_jsonl
+from util.dl import gen_batch, set_random_seed
 from ranker import Ranker
 
 
 def predict(
     model_name,
     input_file,
+    sample_rate,
     output_file,
     batch_size,
     max_source_tokens_count,
@@ -22,21 +25,23 @@ def predict(
     num_beams,
     num_return_sequences,
     early_stopping,
-    source_field
+    source_field,
+    ranker_config
 ):
     set_random_seed(seed)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.to(device)
 
-    records = list(read_jsonl(input_file))
-    ranker = Ranker()
+    ranker = None
+    if ranker_config:
+        ranker_config = json.loads(ranker_config)
+        ranker = Ranker(**ranker_config)
 
-    summaries = []
-    count_style_ok = 0
-    count_fluency_ok = 0
-    sum_sim = 0.0
+    output_texts, scores = [], []
+    records = list(read_jsonl(input_file, sample_rate))
     for batch in tqdm(gen_batch(records, batch_size)):
         texts = [r[source_field] for r in batch]
         input_ids = tokenizer(
@@ -60,19 +65,22 @@ def predict(
 
         for text, sample_output_ids in zip(texts, output_ids):
             targets = [tokenizer.decode(ids, skip_special_tokens=True) for ids in sample_output_ids]
-            best_target, scores = ranker(text, targets)
-            count_style_ok += scores["style"]
-            count_fluency_ok += scores["fluency"]
-            sum_sim += scores["sim"]
-            summaries.append(best_target)
+            best_target = targets[0]
+            if ranker:
+                best_target, best_target_scores = ranker(text, targets)
+                scores.append(best_target_scores)
+            output_texts.append(best_target)
 
-    print("Style:", count_style_ok / len(summaries))
-    print("Fluency:", count_fluency_ok / len(summaries))
-    print("Sim:", sum_sim / len(summaries))
+    for target, s, r in zip(output_texts, scores, records):
+        r["target"] = target
+        r["scores"] = s
 
-    with open(output_file, "w") as w:
-        for s in summaries:
-            w.write(s.strip() + "\n")
+    if ranker:
+        print("Style:", sum([s["style"] for s in scores]) / len(output_texts))
+        print("Fluency:", sum([s["fluency"] for s in scores]) / len(output_texts))
+        print("Sim:", sum([s["sim"] for s in scores]) / len(output_texts))
+
+    write_jsonl(records, output_file)
 
 
 if __name__ == "__main__":
@@ -80,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--input-file", type=str, required=True)
     parser.add_argument("--output-file", type=str, required=True)
     parser.add_argument("--model-name", type=str, required=True)
+    parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-source-tokens-count", type=int, default=600)
@@ -90,5 +99,6 @@ if __name__ == "__main__":
     parser.add_argument("--num-return-sequences", type=int, default=1)
     parser.add_argument("--early-stopping", action="store_true", default=False)
     parser.add_argument("--source-field", type=str, default="text")
+    parser.add_argument("--ranker-config", type=str, default=None)
     args = parser.parse_args()
     predict(**vars(args))

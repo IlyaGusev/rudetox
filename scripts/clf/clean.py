@@ -3,7 +3,7 @@ from collections import Counter
 
 import razdel
 
-from util import read_jsonl, write_jsonl
+from util.io import read_jsonl, write_jsonl
 
 
 def main(
