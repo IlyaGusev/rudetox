@@ -1,10 +1,10 @@
 #!/bin/bash
 
-DETOX_INPUT_FILE="../data/russe_detox_2022/train.tsv";
+DETOX_INPUT_FILE="../data/detox_train.tsv";
 OK_INPUT_FILE="../data/ok.ft";
 CH_INPUT_FILE="../data/2ch.csv";
-PERSONA_INPUT_FILE="../data/TlkPersonaChatRus/dialogues.tsv";
-KOZIEV_INPUT_FILE="../data/dialogues.txt"
+PERSONA_INPUT_FILE="../data/persona.tsv";
+KOZIEV_INPUT_FILE="../data/koziev.txt"
 VOCAB_FILE="../data/bad_vocab.txt";
 
 OUTPUT_FILE="../data/clf_all.jsonl";
