@@ -62,7 +62,6 @@ def main(
             continue
         texts.append(text)
 
-
     if fluent_only:
         fluency_model = Classifier("SkolkovoInstitute/rubert-base-corruption-detector")
         labels = fluency_model(texts)

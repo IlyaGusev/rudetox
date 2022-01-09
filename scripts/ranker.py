@@ -63,13 +63,13 @@ class Ranker:
         source_fluency_label = int(self.eval_fluency([source])[0].item())
 
         style_labels = self.eval_style(targets)
-        good_style_targets = [t for l, t in zip(style_labels, targets) if l == self.good_style_label]
+        good_style_targets = [tgt for lbl, tgt in zip(style_labels, targets) if lbl == self.good_style_label]
         has_good_style = len(good_style_targets) != 0
         if not has_good_style:
             good_style_targets = targets
 
         fluency_labels = self.eval_fluency(good_style_targets)
-        fluent_targets = [t for l, t in zip(fluency_labels, good_style_targets) if l == 1]
+        fluent_targets = [tgt for lbl, tgt in zip(fluency_labels, good_style_targets) if lbl == 1]
         has_fluent = len(fluent_targets) != 0
         if not has_fluent:
             fluent_targets = good_style_targets

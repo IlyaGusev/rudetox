@@ -1,6 +1,7 @@
 import sys
 from util.io import read_jsonl, write_jsonl
 
+
 def is_good_record(r):
     scores = r["scores"]
     target = r["target"]
@@ -23,6 +24,7 @@ def is_good_record(r):
     if "пипс" in target.lower():
         return False
     return True
+
 
 input_path = sys.argv[1]
 output_path = sys.argv[2]
