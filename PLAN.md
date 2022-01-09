@@ -13,6 +13,7 @@
   - ParaNMT-Ru-Leipzig
   - Opusparcus
   - https://github.com/tamriq/paraphrase
+- Переводные датасеты токсичности
 - Искать другие датасеты с диалогами/комментариями
 
 Классификатор стиля:
