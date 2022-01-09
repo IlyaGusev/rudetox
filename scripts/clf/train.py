@@ -10,7 +10,8 @@ from transformers import Trainer, TrainingArguments, pipeline
 from tqdm import tqdm
 from sklearn.metrics import classification_report
 
-from util.io import read_jsonl, gen_batch
+from util.io import read_jsonl
+from util.dl import gen_batch
 
 
 class LabeledDataset(Dataset):

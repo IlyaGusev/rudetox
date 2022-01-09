@@ -4,6 +4,7 @@ from collections import defaultdict
 import torch
 from transformers import AutoModelForSequenceClassification, AutoModel, AutoTokenizer
 from tqdm import tqdm
+from nltk.translate.chrf_score import sentence_chrf
 
 from util.io import read_jsonl, write_jsonl
 from util.dl import run_clf
@@ -58,8 +59,8 @@ class Ranker:
         return run_clf(texts, self.fluency_tokenizer, self.fluency_model)
 
     def __call__(self, source, targets):
-        source_style_label = self.eval_style([source])[0]
-        source_fluency_label = self.eval_fluency([source])[0]
+        source_style_label = int(self.eval_style([source])[0].item())
+        source_fluency_label = int(self.eval_fluency([source])[0].item())
 
         style_labels = self.eval_style(targets)
         good_style_targets = [t for l, t in zip(style_labels, targets) if l == self.good_style_label]
@@ -77,14 +78,29 @@ class Ranker:
         sources = [source for _ in range(len(targets))]
         source_embeddings = self.calc_embedding(sources, self.meaning_tokenizer, self.meaning_model)
         target_embeddings = self.calc_embedding(targets, self.meaning_tokenizer, self.meaning_model)
-        scores = self.cos(source_embeddings, target_embeddings)
-        max_score, best_index = torch.max(scores, 0)
+        cos_scores = self.cos(source_embeddings, target_embeddings)
+        cos_indices = torch.argsort(cos_scores, descending=True).tolist()
+
+        chrf_scores = [sentence_chrf(source, target, beta=1.0) for source, target in zip(sources, targets)]
+        chrf_scores = torch.tensor(chrf_scores)
+        chrf_indices = torch.argsort(chrf_scores, descending=True).tolist()
+
+        cos_ranks = {int(index): rank for rank, index in enumerate(cos_indices)}
+        chrf_ranks = {int(index): rank for rank, index in enumerate(chrf_indices)}
+
+        ranks = torch.tensor([cos_ranks[index] + chrf_ranks[index] for index in range(len(targets))])
+        _, best_index = torch.min(ranks, 0)
+        best_index = best_index.item()
+
         metrics = {
             "source_style": source_style_label,
             "source_fluency": source_fluency_label,
             "style": self.good_style_label if has_good_style else 1 - self.good_style_label,
             "fluency": int(has_fluent),
-            "sim": max_score.item()
+            "sim": cos_scores[best_index].item(),
+            "chrf": chrf_scores[best_index].item(),
+            "sim_rank": cos_ranks[best_index],
+            "chrf_rank": chrf_ranks[best_index]
         }
         return targets[best_index], metrics
 
@@ -97,7 +113,7 @@ def main(
     sample_rate
 ):
     ranker = Ranker()
-    records = read_jsonl(input_path, sample_rate)
+    records = list(read_jsonl(input_path, sample_rate))
     mapping = defaultdict(set)
     for r in records:
         mapping[r[source_field]].add(r[target_field])

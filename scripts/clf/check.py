@@ -80,7 +80,8 @@ def main(
     test_path,
     sample_rate,
     seed,
-    toxic_vocab_path
+    toxic_vocab_path,
+    manual_test_path
 ):
     random.seed(seed)
     # editor = Editor(language="russian", model_name="xlm-roberta-large")
@@ -169,6 +170,18 @@ def main(
             capability="Vocabulary",
             description=""
         ))
+    if manual_test_path is not None:
+        manual_examples = list(read_jsonl(manual_test_path))
+        manual_texts = [r["text"] for r in manual_examples]
+        manual_labels = [r["label"] for r in manual_examples]
+        assert len(manual_labels) == len(manual_texts)
+        suite.add(MFT(
+            manual_texts,
+            labels=manual_labels,
+            name="Manual examples",
+            capability="Vocabulary",
+            description=""
+        ))
 
     suite.run(lambda x: pipe_predict(x, pipe), overwrite=True)
     suite.summary()
@@ -178,6 +191,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-name", type=str, required=True)
     parser.add_argument("--test-path", type=str, required=True)
+    parser.add_argument("--manual-test-path", type=str, default=None)
     parser.add_argument("--toxic-vocab-path", type=str, default=None)
     parser.add_argument("--sample-rate", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)

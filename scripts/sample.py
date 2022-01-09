@@ -41,6 +41,7 @@ def main(
     output_path,
     good_label,
     exclude_sources,
+    fluent_only,
     sample_rate
 ):
     exclude_sources = exclude_sources.split(",")
@@ -62,14 +63,16 @@ def main(
         texts.append(text)
 
 
-    fluency_model = Classifier("SkolkovoInstitute/rubert-base-corruption-detector")
-    labels = fluency_model(texts)
-    filtered_texts = []
-    for label, text in zip(labels, texts):
-        if label == 1:
-            filtered_texts.append(text)
+    if fluent_only:
+        fluency_model = Classifier("SkolkovoInstitute/rubert-base-corruption-detector")
+        labels = fluency_model(texts)
+        filtered_texts = []
+        for label, text in zip(labels, texts):
+            if label == 1:
+                filtered_texts.append(text)
+        texts = filtered_texts
 
-    write_jsonl([{"text": t, "source": sources[t]} for t in filtered_texts], output_path)
+    write_jsonl([{"text": t, "source": sources[t]} for t in texts], output_path)
 
 
 if __name__ == "__main__":
@@ -79,5 +82,6 @@ if __name__ == "__main__":
     parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--good-label", type=int, default=1)
     parser.add_argument("--exclude-sources", type=str, default="detox")
+    parser.add_argument("--fluent-only", action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))

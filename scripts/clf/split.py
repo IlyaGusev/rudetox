@@ -1,6 +1,5 @@
 import argparse
 from collections import Counter, defaultdict
-import random
 
 from util.io import read_jsonl, write_jsonl
 
@@ -14,9 +13,7 @@ def main(
     test_border,
     seed
 ):
-    random.seed(seed)
     records = list(read_jsonl(input_path))
-    random.shuffle(records)
 
     source_records = defaultdict(list)
     train_records, val_records, test_records = [], [], []
@@ -25,6 +22,7 @@ def main(
         source_records[source].append(record)
 
     for source, r in source_records.items():
+        r.sort(key=lambda x: hash(x["text"]))
         n = len(r)
         train_records.extend(r[:int(n * val_border)])
         val_records.extend(r[int(n * val_border): int(n * test_border)])
