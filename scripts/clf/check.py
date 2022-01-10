@@ -81,7 +81,8 @@ def main(
     sample_rate,
     seed,
     toxic_vocab_path,
-    manual_test_path
+    manual_test_path,
+    save_path
 ):
     random.seed(seed)
     # editor = Editor(language="russian", model_name="xlm-roberta-large")
@@ -184,6 +185,8 @@ def main(
         ))
 
     suite.run(lambda x: pipe_predict(x, pipe), overwrite=True)
+    if save_path:
+        suite.save(save_path)
     suite.summary()
 
 
@@ -193,6 +196,7 @@ if __name__ == "__main__":
     parser.add_argument("--test-path", type=str, required=True)
     parser.add_argument("--manual-test-path", type=str, default=None)
     parser.add_argument("--toxic-vocab-path", type=str, default=None)
+    parser.add_argument("--save-path", type=str, default=None)
     parser.add_argument("--sample-rate", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--editor-model-name", type=str, default="xlm-roberta-large")
