@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 DETOX_INPUT_FILE="data/detox_train.tsv";
 OK_INPUT_FILE="data/ok.ft";
@@ -19,7 +20,7 @@ OUTPUT_TEMP_FILE=$(mktemp);
 PERSONA_TEMP_FILE=$(mktemp);
 KOZIEV_TEMP_FILE=$(mktemp);
 
-cd scripts;
+cd rudetox;
 
 echo "Detox processing...";
 python3 -m clf.converters.detox \

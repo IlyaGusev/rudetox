@@ -1,9 +1,8 @@
 #!/bin/bash
 set -e
 
-TRAIN_FILE="data/clf_train.jsonl";
-VAL_FILE="data/clf_val.jsonl";
-TEST_FILE="data/clf_test.jsonl";
+TRAIN_FILE="data/seq2seq_train.jsonl" \
+VAL_FILE="data/seq2seq_val.jsonl";
 
 
 usage() {
@@ -42,11 +41,12 @@ then
 fi
 
 mkdir -p models
-cd scripts;
+cd rudetox;
 
-CUDA_VISIBLE_DEVICES=0 python3 -m clf.train \
-    --train-path ../$TRAIN_FILE \
-    --val-path ../$VAL_FILE \
-    --test-path ../$TEST_FILE \
-    --config-path ../$CONFIG_FILE \
-    --out-dir ../$OUT_DIR;
+CUDA_VISIBLE_DEVICES=0 python3 -m seq2seq.train \
+  --config-file ../$CONFIG_FILE \
+  --train-file ../$TRAIN_FILE \
+  --val-file ../$VAL_FILE \
+  --output-dir ../$OUT_DIR \
+  --source-field "source" \
+  --target-field "target";
