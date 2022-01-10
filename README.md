@@ -7,12 +7,22 @@ bash download_datasets.sh
 
 Сборка данных для классификатора:
 ```
-cd scripts && bash prepare_clf_dataset.sh && cd ..
+bash prepare_clf_dataset.sh
 ```
 
 Сборка данных для T5:
 ```
-cd scripts && bash prepare_seq2seq_dataset.sh && cd ..
+bash prepare_seq2seq_dataset.sh
+```
+
+Запуск обучения классификатора:
+```
+bash train_clf.sh -c configs/rubertconv_clf.json -o models/rubertconv_toxic_clf
+```
+
+Запуск обучения T5:
+```
+bash train_seq2seq.sh -c configs/t5_toxic_training_config.json -o models/rut5_detox
 ```
 
 
