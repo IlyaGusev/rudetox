@@ -75,7 +75,7 @@ def main(
 
     max_tokens = config["max_tokens"]
     model_name = config["model_name"]
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
     train_dataset = LabeledDataset(train_records, max_tokens, tokenizer)
     val_dataset = LabeledDataset(val_records, max_tokens, tokenizer)
 

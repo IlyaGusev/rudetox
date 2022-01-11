@@ -31,7 +31,7 @@ def predict(
     set_random_seed(seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
     model = model.to(device)
 
@@ -98,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-beams", type=int, default=5)
     parser.add_argument("--num-return-sequences", type=int, default=1)
     parser.add_argument("--early-stopping", action="store_true", default=False)
-    parser.add_argument("--source-field", type=str, default="text")
+    parser.add_argument("--source-field", type=str, default="source")
     parser.add_argument("--ranker-config", type=str, default=None)
     args = parser.parse_args()
     predict(**vars(args))
