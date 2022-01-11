@@ -7,6 +7,7 @@
   - opus-mt
   - Искать ещё варианты
 - GPT
+- https://github.com/skoltech-nlp/rudetoxifier/
 
 Датасеты:
 - OpenSubtitles
