@@ -1,0 +1,13 @@
+{
+    "batch_size": 8,
+    "learning_rate": 0.00005,
+    "num_train_epochs": 6,
+    "gradient_accumulation_steps": 16,
+    "max_tokens_count": 100,
+    "logging_steps": 25,
+    "save_steps": 125,
+    "eval_steps": 125,
+    "warmup_steps": 100,
+    "model_type": "causal_lm",
+    "model_name": "sberbank-ai/rugpt3medium_based_on_gpt2"
+}
