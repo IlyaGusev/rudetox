@@ -7,7 +7,7 @@ from tqdm import tqdm
 from nltk.translate.chrf_score import sentence_chrf
 
 from util.io import read_jsonl, write_jsonl
-from util.dl import run_clf
+from util.dl import Classifier, gen_batch
 
 STYLE_MODEL = "SkolkovoInstitute/russian_toxicity_classifier"
 MEANING_MODEL = "cointegrated/LaBSE-en-ru"
@@ -24,39 +24,41 @@ class Ranker:
         device=DEVICE,
         good_style_label=0
     ):
-        self.style_model = AutoModelForSequenceClassification.from_pretrained(style_model_name)
-        self.style_model = self.style_model.to(device)
-        self.style_tokenizer = AutoTokenizer.from_pretrained(style_model_name)
-        self.good_style_label = good_style_label
+        self.style_model = Classifier(style_model_name, device=device)
+        self.fluency_model = Classifier(fluency_model_name, device=device)
 
         self.meaning_model = AutoModel.from_pretrained(meaning_model_name)
         self.meaning_model = self.meaning_model.to(device)
         self.meaning_tokenizer = AutoTokenizer.from_pretrained(meaning_model_name)
 
-        self.fluency_model = AutoModelForSequenceClassification.from_pretrained(fluency_model_name)
-        self.fluency_model = self.fluency_model.to(device)
-        self.fluency_tokenizer = AutoTokenizer.from_pretrained(fluency_model_name)
-
+        self.good_style_label = good_style_label
         self.cos = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
     @staticmethod
-    def calc_embedding(texts, tokenizer, model):
-        inputs = tokenizer(
-            texts,
-            return_tensors="pt",
-            padding=True,
-            truncation=True
-        ).to(model.device)
-        out = model(**inputs)
-        embeddings = out.pooler_output
-        embeddings = torch.nn.functional.normalize(embeddings)
+    def calc_embedding(texts, tokenizer, model, batch_size=32):
+        embeddings = torch.zeros((len(texts), model.config.hidden_size))
+        for batch_num, batch in enumerate(gen_batch(texts, batch_size)):
+            inputs = tokenizer(
+                batch,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=64
+            ).to(model.device)
+            with torch.no_grad():
+                out = model(**inputs)
+                batch_embeddings = out.pooler_output
+                batch_embeddings = torch.nn.functional.normalize(batch_embeddings)
+            start_index = batch_num * batch_size
+            end_index = (batch_num + 1) * batch_size
+            embeddings[start_index:end_index, :] = batch_embeddings
         return embeddings
 
     def eval_style(self, texts):
-        return run_clf(texts, self.style_tokenizer, self.style_model)
+        return self.style_model(texts)
 
     def eval_fluency(self, texts):
-        return run_clf(texts, self.fluency_tokenizer, self.fluency_model)
+        return self.fluency_model(texts)
 
     def __call__(self, source, targets):
         source_style_label = int(self.eval_style([source])[0].item())

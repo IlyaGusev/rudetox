@@ -87,8 +87,9 @@ def run_clf(texts, tokenizer, model):
         padding=True,
         truncation=True
     ).to(model.device)
-    logits = model(**inputs).logits
-    labels = torch.argmax(logits, dim=1)
+    with torch.no_grad():
+        logits = model(**inputs).logits
+        labels = torch.argmax(logits, dim=1)
     return labels
 
 
@@ -108,6 +109,6 @@ class Classifier:
 
     def __call__(self, texts):
         labels = []
-        for batch in tqdm(gen_batch(texts, batch_size=self.batch_size), desc="Classifier inference"):
+        for batch in gen_batch(texts, batch_size=self.batch_size):
             labels.extend(run_clf(batch, self.tokenizer, self.model))
         return labels
