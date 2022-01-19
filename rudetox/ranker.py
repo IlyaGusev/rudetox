@@ -7,7 +7,7 @@ from tqdm import tqdm
 from nltk.translate.chrf_score import sentence_chrf
 
 from util.io import read_jsonl, write_jsonl
-from util.dl import Classifier, gen_batch
+from util.dl import Classifier, Embedder
 
 STYLE_MODEL = "SkolkovoInstitute/russian_toxicity_classifier"
 MEANING_MODEL = "cointegrated/LaBSE-en-ru"
@@ -22,37 +22,19 @@ class Ranker:
         meaning_model_name=MEANING_MODEL,
         fluency_model_name=FLUENCY_MODEL,
         device=DEVICE,
-        good_style_label=0
+        invert_style=False,
+        use_clf_filter=True,
+        weights=(0.2, 0.2, 1.0, 0.0)
     ):
         self.style_model = Classifier(style_model_name, device=device)
         self.fluency_model = Classifier(fluency_model_name, device=device)
+        self.meaning_model = Embedder(meaning_model_name, device=device)
 
-        self.meaning_model = AutoModel.from_pretrained(meaning_model_name)
-        self.meaning_model = self.meaning_model.to(device)
-        self.meaning_tokenizer = AutoTokenizer.from_pretrained(meaning_model_name)
-
-        self.good_style_label = good_style_label
         self.cos = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
 
-    @staticmethod
-    def calc_embedding(texts, tokenizer, model, batch_size=32):
-        embeddings = torch.zeros((len(texts), model.config.hidden_size))
-        for batch_num, batch in enumerate(gen_batch(texts, batch_size)):
-            inputs = tokenizer(
-                batch,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=64
-            ).to(model.device)
-            with torch.no_grad():
-                out = model(**inputs)
-                batch_embeddings = out.pooler_output
-                batch_embeddings = torch.nn.functional.normalize(batch_embeddings)
-            start_index = batch_num * batch_size
-            end_index = (batch_num + 1) * batch_size
-            embeddings[start_index:end_index, :] = batch_embeddings
-        return embeddings
+        self.invert_style = invert_style
+        self.use_clf_filter = use_clf_filter
+        self.weights = weights
 
     def eval_style(self, texts):
         return self.style_model(texts)
@@ -60,49 +42,75 @@ class Ranker:
     def eval_fluency(self, texts):
         return self.fluency_model(texts)
 
-    def __call__(self, source, targets):
-        source_style_label = int(self.eval_style([source])[0].item())
-        source_fluency_label = int(self.eval_fluency([source])[0].item())
-
-        style_labels = self.eval_style(targets)
-        good_style_targets = [tgt for lbl, tgt in zip(style_labels, targets) if lbl == self.good_style_label]
-        has_good_style = len(good_style_targets) != 0
-        if not has_good_style:
-            good_style_targets = targets
-
-        fluency_labels = self.eval_fluency(good_style_targets)
-        fluent_targets = [tgt for lbl, tgt in zip(fluency_labels, good_style_targets) if lbl == 1]
-        has_fluent = len(fluent_targets) != 0
-        if not has_fluent:
-            fluent_targets = good_style_targets
-
-        targets = fluent_targets
+    def eval_sim(self, source, targets):
         sources = [source for _ in range(len(targets))]
-        source_embeddings = self.calc_embedding(sources, self.meaning_tokenizer, self.meaning_model)
-        target_embeddings = self.calc_embedding(targets, self.meaning_tokenizer, self.meaning_model)
-        cos_scores = self.cos(source_embeddings, target_embeddings)
-        cos_indices = torch.argsort(cos_scores, descending=True).tolist()
+        source_embeddings = self.meaning_model(sources)
+        target_embeddings = self.meaning_model(targets)
+        sim_scores = self.cos(source_embeddings, target_embeddings).tolist()
+        return sim_scores
 
+    def eval_chrf(self, source, targets):
+        sources = [source for _ in range(len(targets))]
         chrf_scores = [sentence_chrf(source, target, beta=1.0) for source, target in zip(sources, targets)]
-        chrf_scores = torch.tensor(chrf_scores)
-        chrf_indices = torch.argsort(chrf_scores, descending=True).tolist()
+        return chrf_scores
 
-        cos_ranks = {int(index): rank for rank, index in enumerate(cos_indices)}
-        chrf_ranks = {int(index): rank for rank, index in enumerate(chrf_indices)}
+    @staticmethod
+    def scores_to_ranks(scores, descending=False):
+        indices = torch.argsort(torch.tensor(scores), descending=descending).tolist()
+        ranks = {int(index): float(rank) / max(len(indices) - 1, 1) for rank, index in enumerate(indices)}
+        return ranks
 
-        ranks = torch.tensor([cos_ranks[index] + chrf_ranks[index] for index in range(len(targets))])
-        _, best_index = torch.min(ranks, 0)
-        best_index = best_index.item()
+    def __call__(self, source, targets):
+        source_style_label = int(self.eval_style([source])[0][0])
+        source_fluency_label = int(self.eval_fluency([source])[0][0])
+
+        if self.use_clf_filter:
+            good_style_label = 1 if self.invert_style else 0
+            style_labels, _ = self.eval_style(targets)
+            good_style_targets = [tgt for lbl, tgt in zip(style_labels, targets) if lbl == good_style_label]
+            has_good_style = len(good_style_targets) != 0
+            if not has_good_style:
+                good_style_targets = targets
+
+            fluency_labels, _ = self.eval_fluency(good_style_targets)
+            fluent_targets = [tgt for lbl, tgt in zip(fluency_labels, good_style_targets) if lbl == 1]
+            has_fluent = len(fluent_targets) != 0
+            if not has_fluent:
+                fluent_targets = good_style_targets
+
+            targets = fluent_targets
+
+        _, style_scores = self.eval_style(targets)
+        _, fluent_scores = self.eval_fluency(targets)
+        sim_scores = self.eval_sim(source, targets)
+        chrf_scores = self.eval_chrf(source, targets)
+
+        style_ranks = self.scores_to_ranks(style_scores, descending=not self.invert_style)
+        fluent_ranks = self.scores_to_ranks(fluent_scores)
+        sim_ranks = self.scores_to_ranks(sim_scores)
+        chrf_ranks = self.scores_to_ranks(chrf_scores)
+        all_ranks = [style_ranks, fluent_ranks, sim_ranks, chrf_ranks]
+
+        final_ranks = []
+        for index in range(len(targets)):
+            final_rank = sum(ranks[index] * self.weights[fidx] for fidx, ranks in enumerate(all_ranks))
+            final_ranks.append(final_rank)
+
+        best_index = torch.max(torch.tensor(final_ranks), 0)[1].item()
 
         metrics = {
             "source_style": source_style_label,
             "source_fluency": source_fluency_label,
-            "style": self.good_style_label if has_good_style else 1 - self.good_style_label,
-            "fluency": int(has_fluent),
-            "sim": cos_scores[best_index].item(),
-            "chrf": chrf_scores[best_index].item(),
-            "sim_rank": cos_ranks[best_index],
-            "chrf_rank": chrf_ranks[best_index]
+            "style": style_scores[best_index],
+            "style_rank": style_ranks[best_index],
+            "fluency": fluent_scores[best_index],
+            "fluency_rank": fluent_ranks[best_index],
+            "sim": sim_scores[best_index],
+            "sim_rank": sim_ranks[best_index],
+            "chrf": chrf_scores[best_index],
+            "chrf_rank": chrf_ranks[best_index],
+            "weights": list(self.weights),
+            "final_rank": final_ranks[best_index]
         }
         return targets[best_index], metrics
 
@@ -112,9 +120,10 @@ def main(
     target_field,
     input_path,
     output_path,
-    sample_rate
+    sample_rate,
+    invert_style
 ):
-    ranker = Ranker()
+    ranker = Ranker(invert_style=invert_style)
     records = list(read_jsonl(input_path, sample_rate))
     mapping = defaultdict(set)
     for r in records:
@@ -135,6 +144,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_path", type=str)
     parser.add_argument("output_path", type=str)
+    parser.add_argument("--invert-style", action="store_true", default=False)
     parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--source-field", type=str, default="source")
     parser.add_argument("--target-field", type=str, default="target")

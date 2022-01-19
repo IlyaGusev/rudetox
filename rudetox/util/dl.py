@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
+from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer
 from tqdm import tqdm
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -80,17 +80,18 @@ def pipe_predict(data, pipe):
     return y_pred, scores
 
 
-def run_clf(texts, tokenizer, model):
-    inputs = tokenizer(
-        texts,
-        return_tensors="pt",
-        padding=True,
-        truncation=True
-    ).to(model.device)
-    with torch.no_grad():
-        logits = model(**inputs).logits
-        labels = torch.argmax(logits, dim=1)
-    return labels
+def words_to_tokens(tokenizer, words):
+    tokens = tokenizer(
+        words,
+        is_split_into_words=True,
+        return_tensors="pt"
+    ).input_ids
+    return tokens.squeeze(0)
+
+
+def words_to_sentence(tokenizer, words):
+    tokens = words_to_tokens(tokenizer, words)
+    return tokenizer.decode(tokens, skip_special_tokens=True)
 
 
 class Classifier:
@@ -98,17 +99,66 @@ class Classifier:
         self,
         model_name,
         batch_size=64,
+        max_length=128,
         device=DEVICE
     ):
         self.model_name = model_name
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        self.model = self.model.to(device)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name).to(device)
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.device = device
         self.batch_size = batch_size
+        self.max_length = max_length
 
     def __call__(self, texts):
-        labels = []
+        all_labels, all_scores = [], []
         for batch in gen_batch(texts, batch_size=self.batch_size):
-            labels.extend(run_clf(batch, self.tokenizer, self.model))
-        return labels
+            inputs = self.tokenizer(
+                batch,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_length
+            ).to(self.model.device)
+            with torch.no_grad():
+                logits = self.model(**inputs).logits
+                scores = torch.nn.functional.softmax(logits, dim=1)
+                labels = torch.argmax(scores, dim=1)
+                scores = scores[:, 1]
+                all_labels.extend(labels.tolist())
+                all_scores.extend(scores.tolist())
+        return all_labels, all_scores
+
+
+class Embedder:
+    def __init__(
+        self,
+        model_name,
+        batch_size=64,
+        max_length=128,
+        device=DEVICE
+    ):
+        self.model_name = model_name
+        self.model = AutoModel.from_pretrained(model_name).to(device)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.device = device
+        self.batch_size = batch_size
+        self.max_length = max_length
+
+    def __call__(self, texts):
+        embeddings = torch.zeros((len(texts), self.model.config.hidden_size))
+        for batch_num, batch in enumerate(gen_batch(texts, self.batch_size)):
+            inputs = self.tokenizer(
+                batch,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=self.max_length
+            ).to(self.model.device)
+            with torch.no_grad():
+                out = self.model(**inputs)
+                batch_embeddings = out.pooler_output
+                batch_embeddings = torch.nn.functional.normalize(batch_embeddings)
+            start_index = batch_num * self.batch_size
+            end_index = (batch_num + 1) * self.batch_size
+            embeddings[start_index:end_index, :] = batch_embeddings
+        return embeddings
