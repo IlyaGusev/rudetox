@@ -2,9 +2,9 @@
 
 Перефразеры:
 - Попробовать другие модели машинного перевода:
-  - tiny-wmt
-  - wmt через 3 пары
-  - opus-mt
+  - tiny-wmt - Даниил
+  - wmt через 3 пары - Даниил
+  - opus-mt - Даниил 
   - Искать ещё варианты
 - GPT
 - https://github.com/skoltech-nlp/rudetoxifier/
