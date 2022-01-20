@@ -37,4 +37,4 @@ jobs:
     - name: Prepare clf data
       run: bash scripts/prepare_clf_dataset.sh
     - name: Run clf checklist
-      run: bash scripts/check_clf.sh -m rubertconv_toxic_clf -o clf_test_suite.pkl -s 0.01
+      run: bash scripts/check_clf.sh -m rubertconv_toxic_clf -o clf_test_suite.pkl -s 0.05
