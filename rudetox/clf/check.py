@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 
+import nltk
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
@@ -12,6 +13,9 @@ from checklist.perturb import Perturb
 
 from util.io import read_jsonl
 from util.dl import pipe_predict
+
+# For checklist
+nltk.download("omw-1.4")
 
 
 def replace_yo(x):
