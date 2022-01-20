@@ -2,7 +2,13 @@ import argparse
 import os
 import random
 
+# For checklist
 import nltk
+nltk.download("omw-1.4")
+nltk.download("wordnet")
+nltk.download("wordnet_ic")
+nltk.download("sentiwordnet")
+
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
@@ -13,9 +19,6 @@ from checklist.perturb import Perturb
 
 from util.io import read_jsonl
 from util.dl import pipe_predict
-
-# For checklist
-nltk.download("omw-1.4")
 
 
 def replace_yo(x):
