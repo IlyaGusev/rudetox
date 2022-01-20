@@ -8,12 +8,11 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.7, 3.8, 3.9]
+        python-version: [3.9]
 
     steps:
     - uses: actions/checkout@v2
@@ -28,7 +27,14 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
-        # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    - name: Clone models
+      shell: bash
+      run: git clone https://oauth2:${{ secrets.HF_ACCESS_TOKEN }}@huggingface.co/MindfulSquirrel/rubertconv_toxic_clf
+    - name: Download data
+      run: bash scripts/download_datasets.sh
+    - name: Prepare clf data
+      run: bash scripts/prepare_clf_dataset.sh
+    - name: Run clf checklist
+      run: bash scripts/check_clf.sh -m rubertconv_toxic_clf -o clf_test_suite.pkl -s 0.01
