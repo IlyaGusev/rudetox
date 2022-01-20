@@ -1,4 +1,5 @@
 import argparse
+import os
 import random
 
 import torch
@@ -84,14 +85,15 @@ def main(
     manual_test_path,
     save_path
 ):
+    assert os.path.exists(test_path)
     random.seed(seed)
     # editor = Editor(language="russian", model_name="xlm-roberta-large")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_num = 0 if device == "cuda" else -1
 
-    model = AutoModelForSequenceClassification.from_pretrained(model_name)
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_auth_token=True)
+    model = AutoModelForSequenceClassification.from_pretrained(model_name, use_auth_token=True)
     model.to(device)
 
     records = list(read_jsonl(test_path, sample_rate))
