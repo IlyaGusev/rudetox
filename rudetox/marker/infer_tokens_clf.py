@@ -3,22 +3,28 @@ import copy
 import random
 
 import torch
-from transformers import AutoModelForTokenClassification, AutoModelForMaskedLM
+from transformers import AutoModelForTokenClassification, AutoModelForMaskedLM, AutoModelForSeq2SeqLM
 from transformers import AutoTokenizer, pipeline, BasicTokenizer
 from tqdm import tqdm
 
-from util.io import read_jsonl, write_jsonl
-from util.dl import pipe_predict, words_to_tokens, words_to_sentence
-from util.helpers import get_first_elements
-from util.text import preprocess_text
+from rudetox.util.io import read_jsonl, write_jsonl
+from rudetox.util.dl import pipe_predict, words_to_tokens, words_to_sentence
+from rudetox.util.helpers import get_first_elements
+from rudetox.util.text import preprocess_text
 
 
 class WordFiller:
-    def __init__(self, model_name, device, top_k=7):
+    def __init__(self, model_name, device, mask_token, model_type, top_k=10, eos_token_id=250098):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.word_tokenizer = BasicTokenizer(do_lower_case=False)
-        self.model = AutoModelForMaskedLM.from_pretrained(model_name).to(device)
+        self.model_type = model_type
+        if model_type == "mlm":
+            self.model = AutoModelForMaskedLM.from_pretrained(model_name).to(device)
+        elif model_type == "seq2seq":
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name).to(device)
         self.top_k = top_k
+        self.mask_token = mask_token
+        self.eos_token_id = eos_token_id
 
     def replace_words(self, words, replace_indices):
         assert replace_indices
@@ -32,29 +38,11 @@ class WordFiller:
         return hyps
 
     def _search(self, words, replace_word_idx, remaining_replace_indices):
-        # Mask bad word
-        new_words = copy.deepcopy(words)
-        new_words[replace_word_idx] = "[MASK]"
-
-        # Get mask token index
-        tokens = words_to_tokens(self.tokenizer, new_words).to(self.model.device)
-        mask_token_index = (tokens == self.tokenizer.mask_token_id).nonzero().item()
-
         # Infer filler model, get candidates for mask
-        logits = self.model(input_ids=tokens.unsqueeze(0)).logits.squeeze(0)
-        mask_token_logits = logits[mask_token_index]
-        mask_token_logits[self.tokenizer.all_special_ids] = -100.0
-        replacing_tokens = torch.topk(mask_token_logits, self.top_k, dim=0).indices
-
-        # Save modified variants
-        top_hyps = [words]
-        for token_id in replacing_tokens:
-            tokens[mask_token_index] = token_id
-            hyp = self.tokenizer.decode(tokens, skip_special_tokens=True)
-            hyp_words = self.word_tokenizer.tokenize(hyp)
-            if len(hyp_words) != len(words):
-                continue
-            top_hyps.append(hyp_words)
+        if self.model_type == "mlm":
+            top_hyps = self.fill_mlm(words, replace_word_idx)
+        elif self.model_type == "seq2seq":
+            top_hyps = self.fill_seq2seq(words, replace_word_idx)
 
         if not remaining_replace_indices:
             return top_hyps
@@ -67,6 +55,66 @@ class WordFiller:
             new_hyps.extend(self._search(hyp_words, next_word_idx, next_replace_indices))
         return new_hyps
 
+    def fill_mlm(self, words, replace_word_idx):
+        new_words = copy.deepcopy(words)
+        new_words[replace_word_idx] = self.mask_token
+        tokens = words_to_tokens(self.tokenizer, new_words).to(self.model.device)
+
+        mask_token_index = (tokens == self.tokenizer.mask_token_id).nonzero().item()
+        logits = self.model(input_ids=tokens.unsqueeze(0)).logits.squeeze(0)
+        mask_token_logits = logits[mask_token_index]
+        mask_token_logits[self.tokenizer.all_special_ids] = -100.0
+        replacing_tokens = torch.topk(mask_token_logits, self.top_k, dim=0).indices
+
+        top_hyps = [words]
+        for token_id in replacing_tokens:
+            tokens[mask_token_index] = token_id
+            hyp = self.tokenizer.decode(tokens, skip_special_tokens=True)
+            hyp_words = self.word_tokenizer.tokenize(hyp)
+            if len(hyp_words) != len(words):
+                continue
+            top_hyps.append(hyp_words)
+        return top_hyps
+
+    def fill_seq2seq(self, words, replace_word_idx):
+        new_words = copy.deepcopy(words)
+        new_words[replace_word_idx] = self.mask_token
+        tokens = words_to_tokens(self.tokenizer, new_words).to(self.model.device)
+
+        with torch.no_grad():
+            output_ids = self.model.generate(
+                input_ids=tokens.unsqueeze(0),
+                repetition_penalty=10.0,
+                max_length=12,
+                eos_token_id=self.eos_token_id,
+                num_beams=self.top_k,
+                num_return_sequences=self.top_k
+             )
+
+        print("Orig:", " ".join(new_words))
+        replacing_words = []
+        for ids in output_ids:
+            replacing_word = self.tokenizer.decode(ids, skip_special_tokens=True)
+            replacing_word = replacing_word.replace("<extra_id_0>", "").replace("<extra_id_1>", "")
+            for ch in (".", ",", "(", ")"):
+                replacing_word = replacing_word.replace(ch, " ")
+            replacing_word = replacing_word.strip()
+            if "<" in replacing_word or len(replacing_word) <= 1 or " " in replacing_word:
+                continue
+            replacing_words.append(replacing_word)
+        replacing_words = list(set(replacing_words))
+        print(replacing_words)
+
+        top_hyps = [words]
+        for replacing_word in replacing_words:
+            hyp_words = copy.deepcopy(words)
+            hyp_words[replace_word_idx] = replacing_word
+            hyp_words = " ".join(hyp_words).split()
+            if len(hyp_words) != len(words):
+                continue
+            top_hyps.append(hyp_words)
+        return top_hyps
+
 
 def main(
     model_name,
@@ -77,7 +125,9 @@ def main(
     sample_rate,
     replace_min_prob,
     max_replace_words,
-    seed
+    seed,
+    filler_mask_token,
+    filler_model_type
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_num = 0 if device == "cuda" else -1
@@ -98,7 +148,12 @@ def main(
 
     filler = None
     if filler_model_name:
-        filler = WordFiller(filler_model_name, device)
+        filler = WordFiller(
+            filler_model_name,
+            device,
+            mask_token=filler_mask_token,
+            model_type=filler_model_type
+        )
 
     records = []
     word_tokenizer = BasicTokenizer(do_lower_case=False)
@@ -156,5 +211,7 @@ if __name__ == "__main__":
     parser.add_argument("--filler-model-name", type=str, default=None)
     parser.add_argument("--input-path", type=str, required=True)
     parser.add_argument("--output-path", type=str, required=True)
+    parser.add_argument("--filler-mask-token", type=str, default="[MASK]")
+    parser.add_argument("--filler-model-type", type=str, default="mlm", choices=("mlm", "seq2seq"))
     args = parser.parse_args()
     main(**vars(args))

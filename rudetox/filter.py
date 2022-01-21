@@ -1,6 +1,6 @@
 import sys
 from collections import Counter
-from util.io import read_jsonl, write_jsonl
+from rudetox.util.io import read_jsonl, write_jsonl
 
 
 def is_good_record(r, skip_reasons):

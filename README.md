@@ -1,28 +1,31 @@
 # rudetox
 
-Скачивание данных:
+Установка DVC (https://dvc.org/doc/install):
 ```
-bash scripts/download_datasets.sh
+sudo wget https://dvc.org/deb/dvc.list -O /etc/apt/sources.list.d/dvc.list
+wget -qO - https://dvc.org/deb/iterative.asc | sudo apt-key add -
+sudo apt update
+sudo apt install dvc
 ```
 
 Сборка данных для классификатора:
 ```
-bash scripts/prepare_clf_dataset.sh
+dvc repro prepare_clf_dataset
 ```
 
 Сборка данных для T5:
 ```
-bash scripts/prepare_seq2seq_dataset.sh
+dvc repro prepare_seq2seq_dataset
 ```
 
 Запуск обучения классификатора:
 ```
-bash scripts/train_clf.sh -c configs/rubertconv_clf.json -o models/rubertconv_toxic_clf
+dvc repro train_clf
 ```
 
 Запуск обучения T5:
 ```
-bash scripts/train_seq2seq.sh -c configs/t5_toxic_training_config.json -o models/rut5_detox
+dvc repro train_seq2seq
 ```
 
 

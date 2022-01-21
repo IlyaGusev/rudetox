@@ -2,7 +2,7 @@ import argparse
 import csv
 import json
 
-from util.io import write_jsonl
+from rudetox.util.io import write_jsonl
 
 
 def main(

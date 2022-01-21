@@ -3,10 +3,18 @@ set -e
 
 INPUT_PATH=$1
 OUTPUT_PATH=$2
+SAMPLE_RATE=0.001
+TEXT_FIELD="text"
+#MODEL_TYPE="mlm"
+#MASK_TOKEN="[MASK]"
+MODEL_TYPE="seq2seq"
+MASK_TOKEN="<extra_id_0>"
+
 MARKER_MODEL="models/rubertconv_tokens"
-FILLER_MODEL="models/rubert-base-cased-conversational"
-TMP_INFERENCE_OUTPUT="predictions/condbert.jsonl"
-TMP_RANKER_OUTPUT="predictions/condbert_ranker.jsonl"
+#FILLER_MODEL="models/rubert-base-cased-conversational"
+FILLER_MODEL="models/mt5-small"
+#TMP_INFERENCE_OUTPUT="predictions/rubertconv.jsonl"
+TMP_INFERENCE_OUTPUT="predictions/mt5_small.jsonl"
 
 cd rudetox;
 
@@ -15,14 +23,13 @@ CUDA_VISIBLE_DEVICE=0 python3 -m marker.infer_tokens_clf \
     --input-path "../$INPUT_PATH" \
     --output-path "../$TMP_INFERENCE_OUTPUT" \
     --filler-model-name "../$FILLER_MODEL" \
-    --text-field "source";
+    --text-field $TEXT_FIELD \
+    --filler-model-type $MODEL_TYPE \
+    --filler-mask-token $MASK_TOKEN \
+    --sample-rate $SAMPLE_RATE;
 
 CUDA_VISIBLE_DEVICES=0 python3 ranker.py \
     "../$TMP_INFERENCE_OUTPUT" \
-    "../$TMP_RANKER_OUTPUT";
-
-python3 to_plain.py \
-    "../$TMP_RANKER_OUTPUT" \
     "../$OUTPUT_PATH";
 
 echo $OUTPUT_PATH;

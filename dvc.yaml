@@ -1,0 +1,140 @@
+stages:
+    download_data:
+        cmd: bash scripts/download_datasets.sh
+        deps:
+            - scripts/download_datasets.sh
+        outs:
+            - data/detox_train.tsv
+            - data/detox_dev.tsv
+            - data/2ch.csv
+            - data/ok.ft
+            - data/persona.tsv
+            - data/koziev.txt
+            - data/bad_vocab.txt
+            - data/seq2seq_gen.jsonl
+            - data/seq2seq_gen_train.jsonl
+            - data/seq2seq_gen_val.jsonl
+
+    prepare_seq2seq_dataset:
+        cmd: bash scripts/prepare_seq2seq_dataset.sh
+        deps:
+            - scripts/prepare_seq2seq_dataset.sh
+            - rudetox/seq2seq/converters/detox.py
+            - data/detox_train.tsv
+            - data/detox_dev.tsv
+            - data/seq2seq_gen.jsonl
+            - data/seq2seq_gen_train.jsonl
+            - data/seq2seq_gen_val.jsonl
+        outs:
+            - data/seq2seq_train.jsonl
+            - data/seq2seq_united_train.jsonl
+            - data/seq2seq_val.jsonl
+
+    prepare_clf_dataset:
+        cmd: bash scripts/prepare_clf_dataset.sh
+        deps:
+            - scripts/prepare_clf_dataset.sh
+            - rudetox/clf/converters/detox.py
+            - rudetox/clf/converters/ok.py
+            - rudetox/clf/converters/2ch.py
+            - rudetox/clf/converters/persona.py
+            - rudetox/clf/converters/koziev.py
+            - rudetox/clf/merge_all.py
+            - rudetox/clf/clean.py
+            - rudetox/clf/split.py
+            - data/detox_train.tsv
+            - data/ok.ft
+            - data/2ch.csv
+            - data/persona.tsv
+            - data/koziev.txt
+            - data/bad_vocab.txt
+        outs:
+            - data/clf_all.jsonl
+            - data/clf_train.jsonl
+            - data/clf_val.jsonl
+            - data/clf_test.jsonl
+
+    download_models:
+        cmd:
+            - mkdir -p models
+            - git clone https://huggingface.co/SkolkovoInstitute/russian_toxicity_classifier models/style
+            - git clone https://huggingface.co/cointegrated/LaBSE-en-ru models/sim
+            - git clone https://huggingface.co/SkolkovoInstitute/rubert-base-corruption-detector models/fluency
+        outs:
+            - models/style
+            - models/sim
+            - models/fluency
+
+    train_clf:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.clf.train
+                --config-path configs/rubertconv_toxic_clf.json
+                --train-path data/clf_train.jsonl
+                --val-path data/clf_val.jsonl
+                --test-path data/clf_test.jsonl
+                --out-dir models/rubertconv_toxic_clf
+        deps:
+            - rudetox/clf/train.py
+            - configs/rubertconv_toxic_clf.json
+            - data/clf_train.jsonl
+            - data/clf_val.jsonl
+            - data/clf_test.jsonl
+        outs:
+            - models/rubertconv_toxic_clf
+
+    train_seq2seq:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/rut5_detox.json
+                --train-path data/seq2seq_united_train.jsonl
+                --val-path data/seq2seq_val.jsonl
+                --out-dir models/rut5_detox
+                --source-field "source"
+                --target-field "target"
+        deps:
+            - rudetox/seq2seq/train.py
+            - configs/rut5_detox.json
+            - data/seq2seq_united_train.jsonl
+            - data/seq2seq_val.jsonl
+        outs:
+            - models/rut5_detox
+
+    check_clf:
+        cmd:
+            - mkdir -p reports
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.clf.check
+                --model-name models/rubertconv_toxic_clf
+                --test-path data/clf_test.jsonl
+                --toxic-vocab-path data/bad_vocab.txt
+                --sample-rate 0.1
+                --save-path reports/clf_suite.pkl
+        deps:
+            - models/rubertconv_toxic_clf
+            - rudetox/clf/check.py
+            - data/clf_test.jsonl
+            - data/bad_vocab.txt
+        outs:
+            - reports/clf_suite.pkl
+
+    predict_seq2seq:
+        cmd:
+            - mkdir -p predictions
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
+                --input-file data/clf_test.jsonl
+                --output-file predictions/rut5_detox_ranker.jsonl
+                --model-name models/rut5_detox
+                --num-beams 20
+                --num-return-sequences 20
+                --batch-size 2
+                --ranker-config configs/ranker.json
+        deps:
+            - models/rut5_detox
+            - models/style
+            - models/fluency
+            - models/sim
+            - configs/ranker.json
+            - rudetox/seq2seq/predict.py
+        outs:
+            - predictions/rut5_detox_ranker.jsonl

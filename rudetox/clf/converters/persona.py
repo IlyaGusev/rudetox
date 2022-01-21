@@ -3,7 +3,7 @@ import csv
 import copy
 from html.parser import HTMLParser
 
-from util.io import write_jsonl
+from rudetox.util.io import write_jsonl
 
 
 class DialogueParser(HTMLParser):

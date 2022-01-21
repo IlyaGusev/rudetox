@@ -12,13 +12,12 @@ nltk.download("sentiwordnet")
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
-# from checklist.editor import Editor
 from checklist.test_types import MFT, INV, DIR
 from checklist.test_suite import TestSuite
 from checklist.perturb import Perturb
 
-from util.io import read_jsonl
-from util.dl import pipe_predict
+from rudetox.util.io import read_jsonl
+from rudetox.util.dl import pipe_predict
 
 
 def replace_yo(x):
@@ -94,7 +93,6 @@ def main(
 ):
     assert os.path.exists(test_path)
     random.seed(seed)
-    # editor = Editor(language="russian", model_name="xlm-roberta-large")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_num = 0 if device == "cuda" else -1

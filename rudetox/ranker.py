@@ -1,30 +1,28 @@
 import argparse
 from collections import defaultdict
+import os
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoModel, AutoTokenizer
 from tqdm import tqdm
 from nltk.translate.chrf_score import sentence_chrf
 
-from util.io import read_jsonl, write_jsonl
-from util.dl import Classifier, Embedder
+from rudetox.util.io import read_jsonl, write_jsonl
+from rudetox.util.dl import Classifier, Embedder
 
-STYLE_MODEL = "SkolkovoInstitute/russian_toxicity_classifier"
-MEANING_MODEL = "cointegrated/LaBSE-en-ru"
-FLUENCY_MODEL = "SkolkovoInstitute/rubert-base-corruption-detector"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class Ranker:
     def __init__(
         self,
-        style_model_name=STYLE_MODEL,
-        meaning_model_name=MEANING_MODEL,
-        fluency_model_name=FLUENCY_MODEL,
+        style_model_name,
+        meaning_model_name,
+        fluency_model_name,
+        use_clf_filter,
+        weights,
         device=DEVICE,
-        invert_style=False,
-        use_clf_filter=True,
-        weights=(0.2, 0.2, 1.0, 0.0)
+        invert_style=False
     ):
         self.style_model = Classifier(style_model_name, device=device)
         self.fluency_model = Classifier(fluency_model_name, device=device)
@@ -121,9 +119,14 @@ def main(
     input_path,
     output_path,
     sample_rate,
-    invert_style
+    invert_style,
+    config_path
 ):
-    ranker = Ranker(invert_style=invert_style)
+    assert os.path.exists(config_path)
+    with open(config_path) as r:
+        config = json.load(r)
+
+    ranker = Ranker(**config)
     records = list(read_jsonl(input_path, sample_rate))
     mapping = defaultdict(set)
     for r in records:
@@ -144,7 +147,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_path", type=str)
     parser.add_argument("output_path", type=str)
-    parser.add_argument("--invert-style", action="store_true", default=False)
+    parser.add_argument("--config-path", type=str, default="configs/ranker.json")
     parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--source-field", type=str, default="source")
     parser.add_argument("--target-field", type=str, default="target")

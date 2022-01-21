@@ -6,8 +6,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipe
 from sklearn.metrics import classification_report
 from tqdm import tqdm
 
-from util.io import read_jsonl
-from util.dl import pipe_predict
+from rudetox.util.io import read_jsonl
+from rudetox.util.dl import pipe_predict
 
 
 def main(

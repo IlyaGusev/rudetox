@@ -4,8 +4,8 @@ import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from tqdm import tqdm
 
-from util.io import read_jsonl, write_jsonl
-from util.dl import gen_batch
+from rudetox.util.io import read_jsonl, write_jsonl
+from rudetox.util.dl import gen_batch
 
 PARAPHRASER_NAME = 'cointegrated/rut5-base-paraphraser'
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

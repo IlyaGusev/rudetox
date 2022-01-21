@@ -10,7 +10,7 @@ from transformers import Trainer, TrainingArguments, pipeline
 from tqdm import tqdm
 from sklearn.metrics import classification_report
 
-from util import read_jsonl, gen_batch
+from rudetox.util import read_jsonl, gen_batch
 
 
 class LabeledTokensDataset(Dataset):

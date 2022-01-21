@@ -3,7 +3,7 @@ from collections import Counter
 
 import razdel
 
-from util.io import read_jsonl, write_jsonl
+from rudetox.util.io import read_jsonl, write_jsonl
 
 
 def main(

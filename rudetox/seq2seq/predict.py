@@ -6,9 +6,9 @@ import razdel
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-from util.io import read_jsonl, write_jsonl
-from util.dl import gen_batch, set_random_seed
-from ranker import Ranker
+from rudetox.util.io import read_jsonl, write_jsonl
+from rudetox.util.dl import gen_batch, set_random_seed
+from rudetox.ranker import Ranker
 
 
 def predict(
@@ -37,7 +37,8 @@ def predict(
 
     ranker = None
     if ranker_config:
-        ranker_config = json.loads(ranker_config)
+        with open(ranker_config, "r") as r:
+            ranker_config = json.load(r)
         ranker = Ranker(**ranker_config)
 
     output_texts, scores = [], []

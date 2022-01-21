@@ -7,19 +7,19 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, Trainer, TrainingArguments, logging
 from transformers import EncoderDecoderModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM
 
-from seq2seq.dataset import SummarySeq2SeqDataset, SummaryLMDataset
-from util.io import read_jsonl
-from util.dl import set_random_seed, fix_tokenizer
+from rudetox.seq2seq.dataset import SummarySeq2SeqDataset, SummaryLMDataset
+from rudetox.util.io import read_jsonl
+from rudetox.util.dl import set_random_seed, fix_tokenizer
 
 
 def train(
-    config_file,
+    config_path,
     checkpoint,
-    train_file,
-    val_file,
+    train_path,
+    val_path,
     train_sample_rate,
     val_sample_rate,
-    output_dir,
+    out_dir,
     report_to,
     seed,
     source_field,
@@ -27,7 +27,7 @@ def train(
 ):
     set_random_seed(seed)
     logging.set_verbosity_info()
-    with open(config_file, "r") as r:
+    with open(config_path, "r") as r:
         config = json.load(r)
 
     model_type = config["model_type"]
@@ -37,8 +37,8 @@ def train(
     tokenizer = fix_tokenizer(tokenizer)
 
     # Data preparation
-    train_records = list(read_jsonl(train_file))
-    val_records = list(read_jsonl(val_file))
+    train_records = list(read_jsonl(train_path))
+    val_records = list(read_jsonl(val_path))
     random.shuffle(train_records)
 
     dataset_class = SummaryLMDataset if model_type in ("causal_lm",) else SummarySeq2SeqDataset
@@ -120,7 +120,7 @@ def train(
     num_train_epochs = config["num_train_epochs"]
 
     training_args = TrainingArguments(
-        output_dir=output_dir,
+        output_dir=out_dir,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         logging_steps=logging_steps,
@@ -143,17 +143,17 @@ def train(
         eval_dataset=val_dataset
     )
     trainer.train(checkpoint)
-    model.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
+    model.save_pretrained(out_dir)
+    tokenizer.save_pretrained(out_dir)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config-file", type=str, required=True)
-    parser.add_argument("--train-file", type=str, required=True)
-    parser.add_argument("--val-file", type=str, required=True)
+    parser.add_argument("--config-path", type=str, required=True)
+    parser.add_argument("--train-path", type=str, required=True)
+    parser.add_argument("--val-path", type=str, required=True)
     parser.add_argument("--checkpoint", type=str, default=None)
-    parser.add_argument("--output-dir", type=str, required=True)
+    parser.add_argument("--out-dir", type=str, required=True)
     parser.add_argument("--train-sample-rate", type=float, default=1.0)
     parser.add_argument("--val-sample-rate", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)

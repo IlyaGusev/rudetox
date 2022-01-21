@@ -3,7 +3,7 @@ from difflib import SequenceMatcher
 
 from transformers import AutoTokenizer
 
-from util import read_jsonl, write_jsonl
+from rudetox.util import read_jsonl, write_jsonl
 
 input_path = sys.argv[1]
 model_name = sys.argv[2]

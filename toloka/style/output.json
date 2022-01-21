@@ -1,0 +1,10 @@
+{
+	"result": {
+		"type": "string",
+		"allowed_values": [
+			"neutral",
+			"toxic"
+		],
+		"required": true
+	}
+}

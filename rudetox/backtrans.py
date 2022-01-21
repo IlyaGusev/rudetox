@@ -5,9 +5,9 @@ import torch
 from transformers import FSMTForConditionalGeneration, AutoTokenizer
 from tqdm import tqdm
 
-from util.io import read_jsonl, write_jsonl
-from util.dl import gen_batch
-from util.text import preprocess_text
+from rudetox.util.io import read_jsonl, write_jsonl
+from rudetox.util.dl import gen_batch
+from rudteox.util.text import preprocess_text
 
 BACKWARD_MODEL = "facebook/wmt19-en-ru"
 FORWARD_MODEL = "facebook/wmt19-ru-en"

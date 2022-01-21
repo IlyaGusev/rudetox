@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from util.io import read_jsonl, write_jsonl
+from rudetox.util.io import read_jsonl, write_jsonl
 
 
 def main(
