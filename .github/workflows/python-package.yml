@@ -37,4 +37,15 @@ jobs:
     - name: Prepare clf data
       run: bash scripts/prepare_clf_dataset.sh
     - name: Run clf checklist
-      run: bash scripts/check_clf.sh -m rubertconv_toxic_clf -o clf_test_suite.pkl -s 0.05
+      run: bash scripts/check_clf.sh -m rubertconv_toxic_clf -o clf_test_suite.pkl -s 0.02
+    - name: Report to html
+      run: |
+        mkdir -p output
+        CHECKLIST_SUITE=clf_test_suite.pkl jupyter nbconvert --execute --to html notebooks/show_clf_checks.ipynb
+        mv notebooks/show_clf_checks.html output/show_clf_checks.html
+    - name: Deploy to Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+         github_token: ${{ secrets.GITHUB_TOKEN }}
+         publish_dir: ./output
+         force_orphan: true
