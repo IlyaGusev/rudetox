@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from util.io import read_jsonl, write_jsonl
 from util.dl import gen_batch
+from util.text import preprocess_text
 
 BACKWARD_MODEL = "facebook/wmt19-en-ru"
 FORWARD_MODEL = "facebook/wmt19-ru-en"
@@ -92,11 +93,12 @@ def main(
     output_path,
     sample_rate,
     num_beams,
-    batch_size
+    batch_size,
+    text_field
 ):
     paraphraser = BacktransParaphraser(num_beams=num_beams, batch_size=batch_size)
     records = read_jsonl(input_path, sample_rate)
-    texts = [record["text"] for record in records]
+    texts = [preprocess_text(record[text_field]) for record in records]
     output_records = paraphraser(texts)
     write_jsonl(output_records, output_path)
 
@@ -106,7 +108,8 @@ if __name__ == "__main__":
     parser.add_argument("input_path", type=str)
     parser.add_argument("output_path", type=str)
     parser.add_argument("--sample-rate", type=float, default=1.0)
-    parser.add_argument("--num-beams", type=int, default=10)
-    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--num-beams", type=int, default=5)
+    parser.add_argument("--batch-size", type=int, default=16)
+    parser.add_argument("--text-field", type=str, default="text")
     args = parser.parse_args()
     main(**vars(args))

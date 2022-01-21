@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
-from util import pipe_predict
+from util.dl import pipe_predict
 
 
 def main(

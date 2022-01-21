@@ -61,7 +61,8 @@ PIPELINE = (
     remove_multispaces
 )
 
-def preprocess_text(text):
+def preprocess_text(text, max_words=100):
     for step in PIPELINE:
         text = step(text)
+    text = " ".join(text.split()[:max_words])
     return text

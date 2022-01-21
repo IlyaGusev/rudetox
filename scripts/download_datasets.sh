@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 DETOX_TRAIN_PATH="data/detox_train.tsv"
 DETOX_VAL_PATH="data/detox_dev.tsv"
@@ -7,12 +8,23 @@ OK_PATH="data/ok.ft"
 PERSONA_PATH="data/persona.tsv"
 KOZIEV_PATH="data/koziev.txt"
 BAD_VOCAB_PATH="data/bad_vocab.txt"
+TRAIN_GEN_PATH="data/seq2seq_gen_train.jsonl"
+VAL_GEN_PATH="data/seq2seq_gen_val.jsonl"
+GEN_PATH="data/seq2seq_gen.jsonl"
 
 mkdir -p data;
 
 # https://github.com/skoltech-nlp/russe_detox_2022
 wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/train.tsv -O $DETOX_TRAIN_PATH;
 wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/dev.tsv -O $DETOX_VAL_PATH;
+
+# Backtranslation/marker seq2seq
+wget https://www.dropbox.com/s/97wgsd4pvx49eqq/seq2seq_gen.tar.gz -O data/seq2seq_gen.tar.gz;
+tar -xzvf data/seq2seq_gen.tar.gz;
+mv seq2seq_gen_train.jsonl $TRAIN_GEN_PATH;
+mv seq2seq_gen_val.jsonl $VAL_GEN_PATH;
+mv seq2seq_gen.jsonl $GEN_PATH;
+rm data/seq2seq_gen.tar.gz;
 
 # Vocabulary with bad words
 wget https://www.dropbox.com/s/ou6lx03b10yhrfl/bad_vocab.txt.tar.gz -O data/bad_vocab.txt.tar.gz;

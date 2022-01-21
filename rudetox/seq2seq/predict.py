@@ -71,9 +71,11 @@ def predict(
                 scores.append(best_target_scores)
             output_texts.append(best_target)
 
-    for target, s, r in zip(output_texts, scores, records):
+    for target, r in zip(output_texts, records):
         r["target"] = target
-        r["scores"] = s
+
+    for score, r in zip(scores, records):
+        r["scores"] = score
 
     if ranker:
         print("Style:", sum([s["style"] for s in scores]) / len(output_texts))

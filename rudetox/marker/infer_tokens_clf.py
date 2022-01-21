@@ -26,7 +26,6 @@ class WordFiller:
         # Start recursive search
         replace_word_idx = replace_indices.pop()
         hyps = self._search(words, replace_word_idx, replace_indices)
-        assert len(hyps) > 1
 
         # Words to sentences
         hyps = list({words_to_sentence(self.tokenizer, hyp_words) for hyp_words in hyps})
@@ -77,11 +76,13 @@ def main(
     text_field,
     sample_rate,
     replace_min_prob,
-    max_replace_words
+    max_replace_words,
+    seed
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_num = 0 if device == "cuda" else -1
 
+    random.seed(seed)
     records = read_jsonl(input_path, sample_rate)
     texts = [r[text_field] for r in records]
 
@@ -105,7 +106,7 @@ def main(
     for text_num, (text, predictions, scores) in enumerate(zip(texts, tokens_predictions, tokens_scores)):
         text = preprocess_text(text)
         words = word_tokenizer.tokenize(text)
-        encoded = tokenizer.encode_plus(text)
+        encoded = tokenizer.encode_plus(text, max_length=128)
         tokens = encoded["input_ids"]
 
         scores = scores[:len(tokens)]
@@ -150,7 +151,8 @@ if __name__ == "__main__":
     parser.add_argument("--text-field", type=str, default="text")
     parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--replace-min-prob", type=float, default=0.4)
-    parser.add_argument("--max-replace-words", type=int, default=5)
+    parser.add_argument("--max-replace-words", type=int, default=4)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--filler-model-name", type=str, default=None)
     parser.add_argument("--input-path", type=str, required=True)
     parser.add_argument("--output-path", type=str, required=True)
