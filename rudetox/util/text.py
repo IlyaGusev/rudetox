@@ -19,23 +19,29 @@ EMOJI_PATTERN = re.compile(
     flags=re.UNICODE
 )
 URL_PATTERN = re.compile(r"(http\S+|www\.\S+)", flags=re.UNICODE)
-USERS_PATTERN = re.compile("@(\w+)", flags=re.UNICODE)
-HASHTAG_PATTERN = re.compile("#(\w+)", flags=re.UNICODE)
+USERS_PATTERN = re.compile(r"@(\w+)", flags=re.UNICODE)
+HASHTAG_PATTERN = re.compile(r"#(\w+)", flags=re.UNICODE)
+
 
 def remove_emoji(text):
     return EMOJI_PATTERN.sub(r'', text)
 
+
 def remove_hashtags(text):
     return HASHTAG_PATTERN.sub(r'', text)
+
 
 def remove_urls(text):
     return URL_PATTERN.sub(r'', text)
 
+
 def remove_users(text):
     return USERS_PATTERN.sub(r'', text)
 
+
 def remove_multispaces(text):
     return " ".join(text.split()).strip()
+
 
 def fix_punct(text):
     punct = set(punctuation)
@@ -60,6 +66,7 @@ PIPELINE = (
     fix_punct,
     remove_multispaces
 )
+
 
 def preprocess_text(text, max_words=100):
     for step in PIPELINE:

@@ -89,7 +89,7 @@ class WordFiller:
                 eos_token_id=self.eos_token_id,
                 num_beams=self.top_k,
                 num_return_sequences=self.top_k
-             )
+            )
 
         print("Orig:", " ".join(new_words))
         replacing_words = []
