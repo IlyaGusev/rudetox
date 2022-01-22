@@ -1,0 +1,285 @@
+schema: '2.0'
+stages:
+  download:
+    cmd: bash scripts/download_datasets.sh
+    deps:
+    - path: scripts/download_datasets.sh
+      md5: f75a0fa9e5a8e338bef1de28a1624169
+      size: 2399
+    outs:
+    - path: data/2ch.csv
+      md5: e04d99ca44f5172ade13997ce09f3aea
+      size: 4669913
+    - path: data/bad_vocab.txt
+      md5: 4205eafcfef0eefad951d977bdd65de6
+      size: 3720943
+    - path: data/detox_dev.tsv
+      md5: 561fea58685d9fb7b664000bf2616afe
+      size: 200691
+    - path: data/detox_train.tsv
+      md5: 54bcbb21ea703da28ba719ac4f1ac2d9
+      size: 1902888
+    - path: data/koziev.txt
+      md5: b36d51f0752b40e68896c60aea2009fb
+      size: 139208644
+    - path: data/ok.ft
+      md5: 5fdcf4cdcb449616c6f42b3efe100557
+      size: 39268580
+    - path: data/persona.tsv
+      md5: 0fe4899e0bd5dcc4cfc9e4a4a1401ffe
+      size: 37431241
+      isexec: true
+    - path: data/seq2seq_gen.jsonl
+      md5: bf1b68daa41ee8b751f84445960890b9
+      size: 5865769
+    - path: data/seq2seq_gen_train.jsonl
+      md5: 2bb2c87af47f6a26de1531c064fa322e
+      size: 5128497
+    - path: data/seq2seq_gen_val.jsonl
+      md5: 692e08901f818fd5c67b3cfef4f514a1
+      size: 737272
+  prepare_seq2seq:
+    cmd: bash scripts/prepare_seq2seq_dataset.sh
+    deps:
+    - path: data/detox_dev.tsv
+      md5: 561fea58685d9fb7b664000bf2616afe
+      size: 200691
+    - path: data/detox_train.tsv
+      md5: 54bcbb21ea703da28ba719ac4f1ac2d9
+      size: 1902888
+    - path: data/seq2seq_gen.jsonl
+      md5: bf1b68daa41ee8b751f84445960890b9
+      size: 5865769
+    - path: data/seq2seq_gen_train.jsonl
+      md5: 2bb2c87af47f6a26de1531c064fa322e
+      size: 5128497
+    - path: data/seq2seq_gen_val.jsonl
+      md5: 692e08901f818fd5c67b3cfef4f514a1
+      size: 737272
+    - path: rudetox/seq2seq/converters/detox.py
+      md5: f7fc42ec75f32b6f0a03e646321ccf6f
+      size: 1938
+    outs:
+    - path: data/seq2seq_train.jsonl
+      md5: b5e719acb1811503c11e626f71270a07
+      size: 2574192
+    - path: data/seq2seq_united_train.jsonl
+      md5: 70d041d215f7c828f8213078b9ada481
+      size: 8439961
+    - path: data/seq2seq_val.jsonl
+      md5: 88b5fcf9da5b5d93129557c57754d3b9
+      size: 271171
+  prepare_seq2seq_dataset:
+    cmd: bash scripts/prepare_seq2seq_dataset.sh
+    deps:
+    - path: data/detox_dev.tsv
+      md5: 561fea58685d9fb7b664000bf2616afe
+      size: 200691
+    - path: data/detox_train.tsv
+      md5: 54bcbb21ea703da28ba719ac4f1ac2d9
+      size: 1902888
+    - path: data/seq2seq_gen.jsonl
+      md5: bf1b68daa41ee8b751f84445960890b9
+      size: 5865769
+    - path: data/seq2seq_gen_train.jsonl
+      md5: 2bb2c87af47f6a26de1531c064fa322e
+      size: 5128497
+    - path: data/seq2seq_gen_val.jsonl
+      md5: 692e08901f818fd5c67b3cfef4f514a1
+      size: 737272
+    - path: rudetox/seq2seq/converters/detox.py
+      md5: f7fc42ec75f32b6f0a03e646321ccf6f
+      size: 1938
+    - path: scripts/prepare_seq2seq_dataset.sh
+      md5: 51b3f0763a4d0fa4b56656af22777b1f
+      size: 1135
+    outs:
+    - path: data/seq2seq_train.jsonl
+      md5: b5e719acb1811503c11e626f71270a07
+      size: 2574192
+    - path: data/seq2seq_united_train.jsonl
+      md5: af801401f3a736341c3a7f31577c932f
+      size: 8439961
+    - path: data/seq2seq_val.jsonl
+      md5: 88b5fcf9da5b5d93129557c57754d3b9
+      size: 271171
+  prepare_clf_dataset:
+    cmd: bash scripts/prepare_clf_dataset.sh
+    deps:
+    - path: data/2ch.csv
+      md5: e04d99ca44f5172ade13997ce09f3aea
+      size: 4669913
+    - path: data/bad_vocab.txt
+      md5: 4205eafcfef0eefad951d977bdd65de6
+      size: 3720943
+    - path: data/detox_train.tsv
+      md5: 54bcbb21ea703da28ba719ac4f1ac2d9
+      size: 1902888
+    - path: data/koziev.txt
+      md5: b36d51f0752b40e68896c60aea2009fb
+      size: 139208644
+    - path: data/ok.ft
+      md5: 5fdcf4cdcb449616c6f42b3efe100557
+      size: 39268580
+    - path: data/persona.tsv
+      md5: 0fe4899e0bd5dcc4cfc9e4a4a1401ffe
+      size: 37431241
+    - path: rudetox/clf/clean.py
+      md5: 68c6fdecb5777aeb05e0e300ea7c693b
+      size: 1474
+    - path: rudetox/clf/converters/2ch.py
+      md5: 66460832624543a2929452f30eabf6c0
+      size: 795
+    - path: rudetox/clf/converters/detox.py
+      md5: b6accd57e126202b90d0a391c4e802ef
+      size: 1175
+    - path: rudetox/clf/converters/koziev.py
+      md5: 1ee0292fa55d8bf22e6f96411d20f8b0
+      size: 1274
+    - path: rudetox/clf/converters/ok.py
+      md5: 1e8bee7b6993f29c49a3ab575dfa81ee
+      size: 915
+    - path: rudetox/clf/converters/persona.py
+      md5: 85d7688e7b3b1a86d90d8ae62d65a614
+      size: 2718
+    - path: rudetox/clf/merge_all.py
+      md5: 96987bd83d3bf71bd3e216273b3fa8d4
+      size: 504
+    - path: rudetox/clf/split.py
+      md5: bb91526f44e7c23ec5fb35407cf3292a
+      size: 1454
+    - path: scripts/prepare_clf_dataset.sh
+      md5: 8c63d899d648fef91304ef904a1aac32
+      size: 1955
+    outs:
+    - path: data/clf_all.jsonl
+      md5: 1544f4e7f87164e3af00b8b4e4eb1fdc
+      size: 72412309
+    - path: data/clf_test.jsonl
+      md5: 12c2eccc3bf1091090cac3f3db095ff7
+      size: 7256885
+    - path: data/clf_train.jsonl
+      md5: fdce1df7c20ec4ca0ba8e29f429c8b77
+      size: 57992476
+    - path: data/clf_val.jsonl
+      md5: c0788e9dd93931e0bb9af5e730d70876
+      size: 7162948
+  download_data:
+    cmd: bash scripts/download_datasets.sh
+    deps:
+    - path: scripts/download_datasets.sh
+      md5: f75a0fa9e5a8e338bef1de28a1624169
+      size: 2399
+    outs:
+    - path: data/2ch.csv
+      md5: e04d99ca44f5172ade13997ce09f3aea
+      size: 4669913
+    - path: data/bad_vocab.txt
+      md5: 4205eafcfef0eefad951d977bdd65de6
+      size: 3720943
+    - path: data/detox_dev.tsv
+      md5: 561fea58685d9fb7b664000bf2616afe
+      size: 200691
+    - path: data/detox_train.tsv
+      md5: 54bcbb21ea703da28ba719ac4f1ac2d9
+      size: 1902888
+    - path: data/koziev.txt
+      md5: b36d51f0752b40e68896c60aea2009fb
+      size: 139208644
+    - path: data/ok.ft
+      md5: 5fdcf4cdcb449616c6f42b3efe100557
+      size: 39268580
+    - path: data/persona.tsv
+      md5: 0fe4899e0bd5dcc4cfc9e4a4a1401ffe
+      size: 37431241
+      isexec: true
+    - path: data/seq2seq_gen.jsonl
+      md5: bf1b68daa41ee8b751f84445960890b9
+      size: 5865769
+    - path: data/seq2seq_gen_train.jsonl
+      md5: 2bb2c87af47f6a26de1531c064fa322e
+      size: 5128497
+    - path: data/seq2seq_gen_val.jsonl
+      md5: 692e08901f818fd5c67b3cfef4f514a1
+      size: 737272
+  train_seq2seq:
+    cmd:
+    - mkdir -p models
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train --config-path configs/rut5_detox.json
+      --train-path data/seq2seq_united_train.jsonl --val-path data/seq2seq_val.jsonl
+      --out-dir models/rut5_detox --source-field "source" --target-field "target"
+    deps:
+    - path: configs/rut5_detox.json
+      md5: 90bd0b4f2759e2e59e167ccd217dbb56
+      size: 363
+    - path: data/seq2seq_united_train.jsonl
+      md5: af801401f3a736341c3a7f31577c932f
+      size: 8439961
+    - path: data/seq2seq_val.jsonl
+      md5: 88b5fcf9da5b5d93129557c57754d3b9
+      size: 271171
+    - path: rudetox/seq2seq/train.py
+      md5: e8d9474ddd2ea539e59399599f64c58e
+      size: 5900
+    outs:
+    - path: models/rut5_detox
+      md5: 020123b26fd74cab1bcf4c48c4f831bb.dir
+      size: 6843559696
+      nfiles: 20
+  download_models:
+    cmd:
+    - mkdir -p models
+    - git clone https://huggingface.co/SkolkovoInstitute/russian_toxicity_classifier
+      models/style
+    - git clone https://huggingface.co/cointegrated/LaBSE-en-ru models/sim
+    - git clone https://huggingface.co/SkolkovoInstitute/rubert-base-corruption-detector
+      models/fluency
+    outs:
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: models/style
+      md5: a0a33176042b4f48cbd8c04e906819eb.dir
+      size: 2848489352
+      nfiles: 9
+  predict_seq2seq:
+    cmd:
+    - mkdir -p predictions
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict --input-file data/seq2seq_test.jsonl
+      --output-file predictions/rut5_detox_ranker.jsonl --model-name models/rut5_detox
+      --num-beams 20 --num-return-sequences 20 --batch-size 2 --ranker-config configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 4a1acb650acef81806288659c7e02251
+      size: 192
+    - path: data/seq2seq_test.jsonl
+      md5: 6a9594af463b41d44ecc468f87f6aff3
+      size: 104155
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rut5_detox
+      md5: 020123b26fd74cab1bcf4c48c4f831bb.dir
+      size: 6843559696
+      nfiles: 20
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: models/style
+      md5: a0a33176042b4f48cbd8c04e906819eb.dir
+      size: 2848489352
+      nfiles: 9
+    - path: rudetox/seq2seq/predict.py
+      md5: 26af24f9050afa2e465283f799c9a0b0
+      size: 3881
+    outs:
+    - path: predictions/rut5_detox_ranker.jsonl
+      md5: 052120d1b716cd0c11f163b7346e54dd
+      size: 462071

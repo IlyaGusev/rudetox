@@ -1,5 +1,10 @@
 # rudetox
 
+Установка зависимостей:
+```
+python3 -m pip install -r requirements.txt
+```
+
 Установка DVC (https://dvc.org/doc/install):
 ```
 sudo wget https://dvc.org/deb/dvc.list -O /etc/apt/sources.list.d/dvc.list
