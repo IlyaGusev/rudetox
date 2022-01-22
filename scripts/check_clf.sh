@@ -49,11 +49,9 @@ fi
 TEST_FILE="data/clf_test.jsonl";
 VOCAB_FILE="data/bad_vocab.txt";
 
-cd rudetox;
-
-CUDA_VISIBLE_DEVICES=0 python3.9 -m clf.check \
-    --model-name ../$MODEL_NAME \
-    --test-path ../$TEST_FILE \
-    --toxic-vocab-path ../$VOCAB_FILE \
+CUDA_VISIBLE_DEVICES=0 python3.9 -m rudetox.clf.check \
+    --model-name $MODEL_NAME \
+    --test-path $TEST_FILE \
+    --toxic-vocab-path $VOCAB_FILE \
     --sample-rate $SAMPLE_RATE \
-    --save-path ../$OUT_FILE;
+    --save-path $OUT_FILE;
