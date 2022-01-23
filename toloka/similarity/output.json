@@ -1,0 +1,10 @@
+{
+    "result": {
+        "type": "string",
+        "allowed_values": [
+            "same",
+            "different"
+        ],
+        "required": true
+    }
+}

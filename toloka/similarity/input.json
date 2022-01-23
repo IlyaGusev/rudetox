@@ -1,0 +1,10 @@
+{
+    "first_text": {
+        "type": "string",
+        "required": true
+    },
+    "second_text": {
+        "type": "string",
+        "required": true
+    }
+}

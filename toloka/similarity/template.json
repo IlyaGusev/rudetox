@@ -1,0 +1,69 @@
+{
+  "view": {
+    "type": "layout.side-by-side",
+    "items": [
+      {
+        "type": "view.text",
+        "content": {
+          "type": "data.input",
+          "path": "first_text"
+        }
+      },
+      {
+        "type": "view.text",
+        "content": {
+          "type": "data.input",
+          "path": "second_text"
+        }
+      }
+    ],
+    "controls": {
+      "type": "field.radio-group",
+      "validation": {
+        "type": "condition.required"
+      },
+      "options": [
+        {
+          "label": "Смысл сохранён",
+          "value": "same"
+        },
+        {
+          "label": "Смысл различается",
+          "value": "different"
+        }
+      ],
+      "data": {
+        "type": "data.output",
+        "path": "result"
+      }
+    }
+  },
+  "plugins": [
+    {
+      "type": "plugin.toloka",
+      "layout": {
+        "kind": "scroll",
+        "taskWidth": 1000
+      }
+    },
+    {
+      "1": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "same"
+      },
+      "2": {
+        "type": "action.set",
+        "data": {
+          "type": "data.output",
+          "path": "result"
+        },
+        "payload": "different"
+      },
+      "type": "plugin.hotkeys"
+    }
+  ]
+}
