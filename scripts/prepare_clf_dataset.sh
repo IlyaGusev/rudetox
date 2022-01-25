@@ -7,6 +7,7 @@ CH_INPUT_FILE="data/2ch.csv";
 PERSONA_INPUT_FILE="data/persona.tsv";
 KOZIEV_INPUT_FILE="data/koziev.txt"
 VOCAB_FILE="data/bad_vocab.txt";
+AUG_CONFIG="configs/augmentations.json";
 
 OUTPUT_FILE="data/clf_all.jsonl";
 TRAIN_FILE="data/clf_train.jsonl";
@@ -57,6 +58,19 @@ python3 -m rudetox.clf.split \
     --train-path $TRAIN_FILE \
     --val-path $VAL_FILE \
     --test-path $TEST_FILE;
+echo "Augment train...";
+python3 -m rudetox.clf.augment \
+    --input-path $TRAIN_FILE \
+    --output-path $TRAIN_FILE \
+    --bad-vocab-path $VOCAB_FILE \
+    --config-path $AUG_CONFIG;
+
+echo "Augment val...";
+python3 -m rudetox.clf.augment \
+    --input-path $VAL_FILE \
+    --output-path $VAL_FILE \
+    --bad-vocab-path $VOCAB_FILE \
+    --config-path $AUG_CONFIG;
 
 echo "All: $OUTPUT_FILE";
 echo "Train: $TRAIN_FILE";

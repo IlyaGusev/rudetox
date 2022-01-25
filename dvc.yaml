@@ -42,12 +42,14 @@ stages:
             - rudetox/clf/merge_all.py
             - rudetox/clf/clean.py
             - rudetox/clf/split.py
+            - rudetox/clf/augment.py
             - data/detox_train.tsv
             - data/ok.ft
             - data/2ch.csv
             - data/persona.tsv
             - data/koziev.txt
             - data/bad_vocab.txt
+            - configs/augmentations.json
         outs:
             - data/clf_all.jsonl
             - data/clf_train.jsonl

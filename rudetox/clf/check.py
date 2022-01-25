@@ -16,58 +16,10 @@ from checklist.test_types import MFT, INV, DIR
 from checklist.test_suite import TestSuite
 from checklist.perturb import Perturb
 
-from rudetox.util.io import read_jsonl
+from rudetox.util.io import read_jsonl, read_lines
 from rudetox.util.dl import pipe_predict
-
-
-def replace_yo(x):
-    if "ё" not in x:
-        return None
-    return x.replace("ё", "е")
-
-
-def rm_exclamation(x):
-    if "!" not in x:
-        return None
-    return x.replace("!", "")
-
-
-def add_exclamation(x):
-    if "!" in x:
-        return None
-    if x[-1] == ".":
-        return x[:-1] + "!"
-    return x + "!"
-
-
-def rm_question(x):
-    if "?" not in x:
-        return None
-    return x.replace("?", "")
-
-
-def fix_case(x):
-    has_lower = any(ch.islower() for ch in x)
-    if has_lower:
-        return None
-    return x.lower()
-
-
-def concat_with_toxic(x, toxic_texts):
-    toxic_comment = random.choice(toxic_texts)
-    return " ".join((toxic_comment, x) if random.random() < 0.5 else (x, toxic_comment))
-
-
-def concat_non_toxic(x, non_toxic_texts):
-    non_toxic_comment = random.choice(non_toxic_texts)
-    return " ".join((non_toxic_comment, x) if random.random() < 0.5 else (x, non_toxic_comment))
-
-
-def add_toxic_words(x, toxic_words, num_words=3):
-    sampled_words = []
-    for _ in range(num_words):
-        sampled_words.append(random.choice(toxic_words))
-    return " ".join(sampled_words + [x])
+from rudetox.clf.transformations import replace_yo, rm_exclamation, add_exclamation, rm_question, fix_case
+from rudetox.clf.transformations import concat_with_toxic, concat_non_toxic, add_toxic_words
 
 
 class TextDataset(Dataset):
@@ -120,37 +72,51 @@ def main(
     pred_zeros_texts = [r["text"] for r in records if r["prediction"] == 0]
     pred_ones_texts = [r["text"] for r in records if r["prediction"] == 1]
 
+    inv_checks = [
+        {
+            "func": replace_yo,
+            "name": "ё -> е",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": rm_exclamation,
+            "name": "rm !",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": add_exclamation,
+            "name": "add !",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": fix_case,
+            "name": "CAPS -> lower",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": rm_question,
+            "name": "rm ?",
+            "capability": "Robustness",
+            "description": ""
+        }
+    ]
+
     suite = TestSuite()
-    suite.add(INV(
-        **Perturb.perturb(test_dataset, replace_yo, keep_original=True),
-        name="ё -> е",
-        capability="Robustness",
-        description=""
-    ))
-    suite.add(INV(
-        **Perturb.perturb(test_dataset, rm_exclamation, keep_original=True),
-        name="rm !",
-        capability="Robustness",
-        description=""
-    ))
-    suite.add(INV(
-        **Perturb.perturb(test_dataset, add_exclamation, keep_original=True),
-        name="add !",
-        capability="Robustness",
-        description=""
-    ))
-    suite.add(INV(
-        **Perturb.perturb(test_dataset, fix_case, keep_original=True),
-        name="CAPS -> lower",
-        capability="Robustness",
-        description=""
-    ))
-    suite.add(INV(
-        **Perturb.perturb(test_dataset, rm_question, keep_original=True),
-        name="rm ?",
-        capability="Robustness",
-        description=""
-    ))
+    for check in inv_checks:
+        data = Perturb.perturb(test_dataset, check["func"], keep_original=True).data
+        if not data:
+            continue
+        suite.add(INV(
+            data=data,
+            name=check["name"],
+            capability=check["capability"],
+            description=check["description"]
+        ))
+
     suite.add(MFT(
         [concat_with_toxic(t, pred_ones_texts) for t in pred_zeros_texts],
         labels=1,
@@ -166,11 +132,7 @@ def main(
         description=""
     ))
     if toxic_vocab_path is not None:
-        toxic_words = list()
-        with open(toxic_vocab_path, "r") as r:
-            for line in r:
-                line = line.strip()
-                toxic_words.append(line)
+        toxic_words = read_lines(toxic_vocab_path)
         suite.add(MFT(
             [add_toxic_words(t, toxic_words) for t in pred_zeros_texts],
             labels=1,

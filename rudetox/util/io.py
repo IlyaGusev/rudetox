@@ -15,3 +15,11 @@ def write_jsonl(records, file_path):
     with open(file_path, "w") as w:
         for r in records:
             w.write(json.dumps(r, ensure_ascii=False).strip() + "\n")
+
+
+def read_lines(file_path):
+    lines = list()
+    with open(file_path, "r") as r:
+        for line in r:
+            lines.append(line.strip())
+    return lines

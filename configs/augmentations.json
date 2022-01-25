@@ -1,0 +1,38 @@
+{
+    "augmentations": [
+        {
+            "name": "replace_yo",
+            "rate": 0.2
+        },
+        {
+            "name": "rm_exclamation",
+            "rate": 0.13
+        },
+        {
+            "name": "add_exclamation",
+            "rate": 0.03
+        },
+        {
+            "name": "rm_question",
+            "rate": 0.1
+        },
+        {
+            "name": "fix_case"
+        },
+        {
+            "name": "concat_with_toxic",
+            "rate": 0.025,
+            "label": 1
+        },
+        {
+            "name": "concat_non_toxic",
+            "rate": 0.025,
+            "label": 0
+        },
+        {
+            "name": "add_toxic_words",
+            "rate": 0.025,
+            "label": 1
+        }
+    ]
+}
