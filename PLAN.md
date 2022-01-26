@@ -19,7 +19,7 @@
   - https://github.com/yandex/mlcup
 - Tinkoff?
   - https://cogmodel.mipt.ru/iprofitrack5
-- RHSR:
+- RHSR - Илья:
   - https://aclanthology.org/2021.bsnlp-1.3.pdf
   - https://github.com/fivethirtyeight/russian-troll-tweets
   - https://github.com/Sariellee/Russan-Hate-speech-Recognition
