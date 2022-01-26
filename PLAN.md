@@ -19,7 +19,7 @@
   - https://github.com/yandex/mlcup
 - Tinkoff?
   - https://cogmodel.mipt.ru/iprofitrack5
-- RHSR:
+- RHSR - Илья:
   - https://aclanthology.org/2021.bsnlp-1.3.pdf
   - https://github.com/fivethirtyeight/russian-troll-tweets
   - https://github.com/Sariellee/Russan-Hate-speech-Recognition
@@ -46,7 +46,7 @@
 - PPL
 
 Другое:
-- Попробовать заменять удалённые "фломастером" токены на маску, восстаналивать через RuBERT (condBERT, https://arxiv.org/abs/1812.06705)
+- ~~Попробовать заменять удалённые "фломастером" токены на маску, восстаналивать через RuBERT (condBERT, https://arxiv.org/abs/1812.06705)~~
 - Попробовать заменять удалённые "фломастером" слова на ближайшие нетоксичные
 - "Фломастер" через разницу правдоподобия - Илья
 - "Фломастер" через внимание
