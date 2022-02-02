@@ -1,6 +1,7 @@
 import argparse
 import json
 import random
+import tempfile
 
 import numpy as np
 import torch
@@ -15,13 +16,20 @@ from rudetox.util.dl import gen_batch
 
 
 class LabeledDataset(Dataset):
-    def __init__(self, records, max_tokens, tokenizer):
+    def __init__(
+        self,
+        records,
+        max_tokens,
+        tokenizer,
+        text_field="text",
+        res_field="label"
+    ):
         self.tokenizer = tokenizer
         self.max_tokens = max_tokens
         self.records = list()
         for r in tqdm(records):
-            inputs = self.embed_record(r["text"])
-            inputs["labels"] = torch.LongTensor([r["label"]])
+            inputs = self.embed_record(r[text_field])
+            inputs["labels"] = torch.LongTensor([r[res_field]])
             self.records.append(inputs)
 
     def embed_record(self, text):
@@ -52,22 +60,16 @@ def pipe_predict(data, pipe, batch_size=64):
     return y_pred, scores
 
 
-def main(
-    train_path,
-    val_path,
-    test_path,
-    config_path,
+def train(
+    train_records,
+    val_records,
+    config,
     seed,
-    out_dir,
-    sample_rate
+    text_field,
+    res_field,
+    device,
+    output_dir=None
 ):
-    train_records = list(read_jsonl(train_path, sample_rate))
-    val_records = list(read_jsonl(val_path, sample_rate))
-    test_records = list(read_jsonl(test_path, sample_rate))
-
-    with open(config_path, "r") as r:
-        config = json.load(r)
-
     random.seed(seed)
     random.shuffle(train_records)
     print("Train records: ", len(train_records))
@@ -76,11 +78,10 @@ def main(
     max_tokens = config["max_tokens"]
     model_name = config["model_name"]
     tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
-    train_dataset = LabeledDataset(train_records, max_tokens, tokenizer)
-    val_dataset = LabeledDataset(val_records, max_tokens, tokenizer)
+    train_dataset = LabeledDataset(train_records, max_tokens, tokenizer, text_field, res_field)
+    val_dataset = LabeledDataset(val_records, max_tokens, tokenizer, text_field, res_field)
 
     num_labels = config["num_labels"]
-    device = "cuda" if torch.cuda.is_available() else "cpu"
     model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
     model = model.to(device)
     model.config.id2label = {int(key): value for key, value in config["id2label"].items()}
@@ -94,8 +95,11 @@ def main(
     learning_rate = config["learning_rate"]
     warmup_steps = config["warmup_steps"]
     num_train_epochs = config["num_train_epochs"]
+    if output_dir is None:
+        temp_output_dir = tempfile.TemporaryDirectory()
+        output_dir = temp_output_dir.name
     training_args = TrainingArguments(
-        output_dir=out_dir,
+        output_dir=output_dir,
         evaluation_strategy="steps",
         save_strategy="steps",
         per_device_train_batch_size=batch_size,
@@ -118,8 +122,39 @@ def main(
         train_dataset=train_dataset,
         eval_dataset=val_dataset
     )
-
     trainer.train()
+
+    return model, tokenizer
+
+
+def main(
+    train_path,
+    val_path,
+    test_path,
+    config_path,
+    seed,
+    out_dir,
+    sample_rate,
+    text_field,
+    res_field
+):
+    train_records = list(read_jsonl(train_path, sample_rate))
+    val_records = list(read_jsonl(val_path, sample_rate))
+    test_records = list(read_jsonl(test_path, sample_rate))
+    with open(config_path, "r") as r:
+        config = json.load(r)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model, tokenizer = train(
+        train_records,
+        val_records,
+        config=config,
+        seed=seed,
+        text_field=text_field,
+        res_field=res_field,
+        output_dir=out_dir,
+        device=device
+    )
     model.save_pretrained(out_dir)
     tokenizer.save_pretrained(out_dir)
 
@@ -138,6 +173,8 @@ if __name__ == "__main__":
     parser.add_argument("--test-path", type=str, required=True)
     parser.add_argument("--out-dir", type=str, required=True)
     parser.add_argument("--config-path", type=str, required=True)
+    parser.add_argument("--text-field", type=str, default="text")
+    parser.add_argument("--res-field", type=str, default="label")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample-rate", type=float, default=1.0)
     args = parser.parse_args()

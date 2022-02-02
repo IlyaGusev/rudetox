@@ -1,0 +1,5 @@
+{
+    "include_sources": ["ok", "2ch"],
+    "include_labels": [1],
+    "max_length": 200
+}

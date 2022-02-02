@@ -1,0 +1,6 @@
+{
+    "min_fluency": 0.4,
+    "min_sim": 0.8,
+    "min_chrf": 0.4,
+    "max_style": 0.2
+}

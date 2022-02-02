@@ -91,7 +91,6 @@ class WordFiller:
                 num_return_sequences=self.top_k
             )
 
-        print("Orig:", " ".join(new_words))
         replacing_words = []
         for ids in output_ids:
             replacing_word = self.tokenizer.decode(ids, skip_special_tokens=True)
@@ -103,7 +102,6 @@ class WordFiller:
                 continue
             replacing_words.append(replacing_word)
         replacing_words = list(set(replacing_words))
-        print(replacing_words)
 
         top_hyps = [words]
         for replacing_word in replacing_words:
@@ -157,8 +155,8 @@ def main(
 
     records = []
     word_tokenizer = BasicTokenizer(do_lower_case=False)
-    tokens_predictions, tokens_scores = pipe_predict(texts, pipe)
-    for text_num, (text, predictions, scores) in enumerate(zip(texts, tokens_predictions, tokens_scores)):
+    marker_tags, marker_scores = pipe_predict(texts, pipe)
+    for text_num, (text, predictions, scores) in tqdm(enumerate(zip(texts, marker_tags, marker_scores))):
         text = preprocess_text(text)
         words = word_tokenizer.tokenize(text)
         encoded = tokenizer.encode_plus(text, max_length=128)
@@ -185,16 +183,16 @@ def main(
         word_replace_indices = list(sorted({idx for idx in word_replace_indices if idx is not None}))
         word_replace_indices = [idx for idx in word_replace_indices if len(words[idx]) > 1]
         bad_words = [words[idx] for idx in word_replace_indices]
-        print()
-        print("Num: {}, text: {}, bad_words: {}".format(text_num, text, bad_words))
+        #print()
+        #print("Num: {}, text: {}, bad_words: {}".format(text_num, text, bad_words))
 
         can_replace = (1 <= len(word_replace_indices) <= max_replace_words)
         if not filler or not can_replace or tokenizer.unk_token_id in tokens:
-            print("Skip replace step")
+            #print("Skip replace step")
             continue
 
         hyps = filler.replace_words(words, word_replace_indices)
-        print("Hyps count: {}, random hyp: {}".format(len(hyps), random.choice(hyps)))
+        #print("Hyps count: {}, random hyp: {}".format(len(hyps), random.choice(hyps)))
         records.extend([{"target": hyp, "source": text, "type": "condbert"} for hyp in hyps])
 
     write_jsonl(records, output_path)

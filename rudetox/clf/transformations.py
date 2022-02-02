@@ -45,10 +45,11 @@ def concat_non_toxic(x, non_toxic_texts):
 
 
 def add_toxic_words(x, toxic_words, num_words=3):
-    sampled_words = []
+    words = x.split()
     for _ in range(num_words):
-        sampled_words.append(random.choice(toxic_words))
-    return " ".join(sampled_words + [x])
+        toxic_word = random.choice(toxic_words)
+        words.insert(random.randint(0, len(words)), toxic_word)
+    return " ".join(words)
 
 
 def form_transformations(toxic_texts, non_toxic_texts, toxic_words):

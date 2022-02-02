@@ -3,6 +3,7 @@ set -e
 
 DETOX_TRAIN_FILE="data/detox_train.tsv";
 DETOX_DEV_FILE="data/detox_dev.tsv";
+DETOX_TEST_FILE="data/detox_test.tsv";
 
 GEN_FILE="data/seq2seq_gen.jsonl"
 PRE_TRAIN_FILE="data/seq2seq_gen_train.jsonl"
@@ -22,9 +23,8 @@ python3 -m rudetox.seq2seq.converters.detox \
     --output-file $VAL_FILE;
 
 python3 -m rudetox.seq2seq.converters.detox \
-    --input-file $DETOX_DEV_FILE \
-    --output-file $TEST_FILE \
-    --source-only;
+    --input-file $DETOX_TEST_FILE \
+    --output-file $TEST_FILE
 
 cat $GEN_FILE > $UNITED_TRAIN_FILE;
 cat $TRAIN_FILE >> $UNITED_TRAIN_FILE;
@@ -34,6 +34,6 @@ mv $UNITED_TRAIN_FILE.shuf $UNITED_TRAIN_FILE;
 echo "Pretrain Train: $PRE_TRAIN_FILE"
 echo "Pretrain Val: $PRE_VAL_FILE"
 echo "Train: $TRAIN_FILE";
-echo "Val: $VAL_FILE";
 echo "United Train: $UNITED_TRAIN_FILE"
+echo "Val: $VAL_FILE";
 echo "Test: $TEST_FILE";

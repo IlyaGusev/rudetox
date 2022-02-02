@@ -120,7 +120,6 @@ def main(
     input_path,
     output_path,
     sample_rate,
-    invert_style,
     config_path
 ):
     assert os.path.exists(config_path)

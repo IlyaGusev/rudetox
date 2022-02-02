@@ -3,6 +3,7 @@ set -e
 
 DETOX_TRAIN_PATH="data/detox_train.tsv"
 DETOX_VAL_PATH="data/detox_dev.tsv"
+DETOX_TEST_PATH="data/detox_test.tsv"
 CH_PATH="data/2ch.csv"
 OK_PATH="data/ok.ft"
 PERSONA_PATH="data/persona.tsv"
@@ -17,6 +18,7 @@ mkdir -p data;
 # https://github.com/skoltech-nlp/russe_detox_2022
 wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/train.tsv -O $DETOX_TRAIN_PATH;
 wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/dev.tsv -O $DETOX_VAL_PATH;
+wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/test.tsv -O $DETOX_TEST_PATH;
 
 # Backtranslation/marker seq2seq
 wget https://www.dropbox.com/s/97wgsd4pvx49eqq/seq2seq_gen.tar.gz -O data/seq2seq_gen.tar.gz;
@@ -49,6 +51,7 @@ unzip data/dialogues.zip && mv dialogues.txt $KOZIEV_PATH && rm -rf data/dialogu
 
 echo "Detox train: $DETOX_TRAIN_PATH";
 echo "Detox val: $DETOX_VAL_PATH";
+echo "Detox test: $DETOX_TEST_PATH";
 echo "Vocab: $BAD_VOCAB_PATH";
 echo "2ch/Pikabu: $CH_PATH";
 echo "Odnoklassniki: $OK_PATH";

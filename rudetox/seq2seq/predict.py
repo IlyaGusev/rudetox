@@ -1,5 +1,6 @@
 import argparse
 import json
+import copy
 
 import torch
 import razdel
@@ -66,11 +67,18 @@ def predict(
 
         for text, sample_output_ids in zip(texts, output_ids):
             targets = [tokenizer.decode(ids, skip_special_tokens=True) for ids in sample_output_ids]
-            best_target = targets[0]
             if ranker:
                 best_target, best_target_scores = ranker(text, targets)
                 scores.append(best_target_scores)
-            output_texts.append(best_target)
+                targets = [best_target]
+            output_texts.extend(targets)
+
+    if not ranker:
+        fixed_records = []
+        for r in records:
+            for _ in range(num_return_sequences):
+                fixed_records.append(copy.copy(r))
+        records = fixed_records
 
     for target, r in zip(output_texts, records):
         r["target"] = target

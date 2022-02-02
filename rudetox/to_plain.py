@@ -1,6 +1,6 @@
 import sys
 
-from util.io import read_jsonl
+from rudetox.util.io import read_jsonl
 
 input_path = sys.argv[1]
 output_path = sys.argv[2]

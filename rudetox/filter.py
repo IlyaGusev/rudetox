@@ -1,38 +1,62 @@
-import sys
+import argparse
+import json
 from collections import Counter
+
 from rudetox.util.io import read_jsonl, write_jsonl
 
 
-def is_good_record(r, skip_reasons):
+def is_good_record(r, config):
     scores = r["scores"]
     target = r["target"]
-    if scores["style"] > 0.2:
-        skip_reasons["style"] += 1
-        return False
-    if scores["source_style"] == 0:
-        skip_reasons["source_style"] += 1
-        return False
-    if scores["fluency"] < 0.4:
-        skip_reasons["fluency"] += 1
-        return False
-    if scores["sim"] < 0.8:
-        skip_reasons["sim"] += 1
-        return False
-    if scores["chrf"] < 0.4:
-        skip_reasons["chrf"] += 1
-        return False
-    bad_substrings = ("творен", "паден", "греба", "пипс")
-    for ss in bad_substrings:
-        if ss in target.lower():
-            skip_reasons["bad_substrings"] += 1
-            return False
-    return True
+    source = r["source"]
+    if scores["style"] > config.get("max_style", 1.0):
+        return False, "max_style"
+    if scores["style"] < config.get("min_style", 0.0):
+        return False, "min_style"
+    if scores["fluency"] < config.get("min_fluency", 0.0):
+        return False, "fluency"
+    if scores["sim"] < config.get("min_sim", 0.0):
+        return False, "sim"
+    if scores["chrf"] < config.get("min_chrf", 0.0):
+        return False, "chrf"
+    return True, "ok"
 
 
-input_path = sys.argv[1]
-output_path = sys.argv[2]
-records = read_jsonl(input_path)
-skip_reasons = Counter()
-records = [r for r in records if is_good_record(r, skip_reasons)]
-print(skip_reasons.most_common())
-write_jsonl(records, output_path)
+def main(
+    input_path,
+    output_path,
+    config_path,
+    source_field,
+    target_field
+):
+    records = list(read_jsonl(input_path))
+    for r in records:
+        source = r.pop(source_field)
+        target = r.pop(target_field)
+        r["source"] = source
+        r["target"] = target
+
+    skip_reasons = Counter()
+    with open(config_path) as r:
+        config = json.load(r)
+
+    filtered_records = []
+    for r in records:
+        flag, reason = is_good_record(r, config)
+        if not flag:
+            skip_reasons[reason] += 1
+            continue
+        filtered_records.append(r)
+    print(skip_reasons.most_common())
+    write_jsonl(filtered_records, output_path)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_path", type=str)
+    parser.add_argument("output_path", type=str)
+    parser.add_argument("--config-path", type=str, required=True)
+    parser.add_argument("--source-field", type=str, required=True)
+    parser.add_argument("--target-field", type=str, required=True)
+    args = parser.parse_args()
+    main(**vars(args))

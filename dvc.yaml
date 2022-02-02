@@ -6,6 +6,7 @@ stages:
         outs:
             - data/detox_train.tsv
             - data/detox_dev.tsv
+            - data/detox_test.tsv
             - data/2ch.csv
             - data/ok.ft
             - data/persona.tsv
@@ -22,6 +23,7 @@ stages:
             - rudetox/seq2seq/converters/detox.py
             - data/detox_train.tsv
             - data/detox_dev.tsv
+            - data/detox_test.tsv
             - data/seq2seq_gen.jsonl
             - data/seq2seq_gen_train.jsonl
             - data/seq2seq_gen_val.jsonl
@@ -29,6 +31,7 @@ stages:
             - data/seq2seq_train.jsonl
             - data/seq2seq_united_train.jsonl
             - data/seq2seq_val.jsonl
+            - data/seq2seq_test.jsonl
 
     prepare_clf_dataset:
         cmd: bash scripts/prepare_clf_dataset.sh
@@ -59,13 +62,20 @@ stages:
     download_models:
         cmd:
             - mkdir -p models
+            - rm -rf models/style models/sim models/fluency models/en_ru models/ru_en models/rubertconv
             - git clone https://huggingface.co/SkolkovoInstitute/russian_toxicity_classifier models/style
             - git clone https://huggingface.co/cointegrated/LaBSE-en-ru models/sim
             - git clone https://huggingface.co/SkolkovoInstitute/rubert-base-corruption-detector models/fluency
+            - git clone https://huggingface.co/facebook/wmt19-en-ru models/en_ru
+            - git clone https://huggingface.co/facebook/wmt19-ru-en models/ru_en
+            - git clone https://huggingface.co/DeepPavlov/rubert-base-cased-conversational models/rubertconv
         outs:
             - models/style
             - models/sim
             - models/fluency
+            - models/en_ru
+            - models/ru_en
+            - models/rubertconv
 
     train_clf:
         cmd:
@@ -76,6 +86,7 @@ stages:
                 --val-path data/clf_val.jsonl
                 --test-path data/clf_test.jsonl
                 --out-dir models/rubertconv_toxic_clf
+            - rm -rf models/rubertconv_toxic_clf/checkpoint*
         deps:
             - rudetox/clf/train.py
             - configs/rubertconv_toxic_clf.json
@@ -95,6 +106,7 @@ stages:
                 --out-dir models/rut5_detox
                 --source-field "source"
                 --target-field "target"
+            - rm -rf models/rut5_detox/checkpoint*
         deps:
             - rudetox/seq2seq/train.py
             - configs/rut5_detox.json
@@ -141,3 +153,188 @@ stages:
             - data/seq2seq_test.jsonl
         outs:
             - predictions/rut5_detox_ranker.jsonl
+
+    sample_toxic:
+        cmd:
+            - python3 -m rudetox.sample
+                data/clf_all.jsonl data/toxic.jsonl
+                --config-path configs/toxic_sampler.json
+        deps:
+            - rudetox/sample.py
+            - configs/toxic_sampler.json
+            - data/clf_all.jsonl
+        outs:
+            - data/toxic.jsonl
+
+    sample_neutral:
+        cmd:
+            - python3 -m rudetox.sample
+                data/clf_all.jsonl data/neutral.jsonl
+                --config-path configs/neutral_sampler.json
+        deps:
+            - rudetox/sample.py
+            - configs/neutral_sampler.json
+            - data/clf_all.jsonl
+        outs:
+            - data/neutral.jsonl
+
+    gen_toxic2neutral_backtrans:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.backtrans
+                data/toxic.jsonl data/backtrans_toxic2neutral.jsonl
+                --num-beams 5
+                --forward-model-name models/ru_en
+                --backward-model-name models/en_ru
+        deps:
+            - rudetox/backtrans.py
+            - data/toxic.jsonl
+            - models/ru_en
+            - models/en_ru
+        outs:
+            - data/backtrans_toxic2neutral.jsonl
+
+    train_reverse_seq2seq:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/rut5_tox.json
+                --train-path data/seq2seq_train.jsonl
+                --val-path data/seq2seq_val.jsonl
+                --out-dir models/rut5_tox
+                --source-field "target"
+                --target-field "source"
+            - rm -rf models/rut5_tox/checkpoint*
+        deps:
+            - rudetox/seq2seq/train.py
+            - configs/rut5_tox.json
+            - data/seq2seq_train.jsonl
+            - data/seq2seq_val.jsonl
+        outs:
+            - models/rut5_tox
+
+    predict_reverse_seq2seq:
+        cmd:
+            - mkdir -p predictions
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
+                --input-file data/neutral.jsonl
+                --source-field text
+                --sample-rate 0.03
+                --output-file data/reverse_neutral2toxic.jsonl
+                --model-name models/rut5_tox
+                --num-beams 20
+                --num-return-sequences 20
+                --batch-size 2
+        deps:
+            - models/rut5_tox
+            - rudetox/seq2seq/predict.py
+            - data/neutral.jsonl
+        outs:
+            - data/reverse_neutral2toxic.jsonl
+
+    rank_neutral2toxic_reverse_seq2seq:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
+                data/reverse_neutral2toxic.jsonl data/reverse_neutral2toxic_ranked.jsonl
+                --config-path configs/inverse_ranker.json
+                --source-field text
+                --target-field target
+        deps:
+            - rudetox/ranker.py
+            - data/reverse_neutral2toxic.jsonl
+            - configs/inverse_ranker.json
+        outs:
+            - data/reverse_neutral2toxic_ranked.jsonl
+
+    finalize_neutral2toxic_reverse_seq2seq:
+        cmd:
+            - python3 -m rudetox.filter
+                data/reverse_neutral2toxic_ranked.jsonl
+                data/reverse_neutral2toxic_final.jsonl
+                --config-path configs/inverse_filter.json
+                --source-field target
+                --target-field source
+        deps:
+            - rudetox/filter.py
+            - configs/inverse_filter.json
+            - data/reverse_neutral2toxic_ranked.jsonl
+        outs:
+            - data/reverse_neutral2toxic_final.jsonl
+
+    train_marker:
+        cmd:
+            - python3 -m rudetox.marker.compute_tags
+                data/seq2seq_train.jsonl data/marker_train.jsonl
+                --model-name models/rubertconv
+            - python3 -m rudetox.marker.compute_tags
+                data/seq2seq_val.jsonl data/marker_val.jsonl
+                --model-name models/rubertconv
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.train
+                --train-path data/marker_train.jsonl
+                --val-path data/marker_val.jsonl
+                --out-dir models/rubertconv_toxic_marker
+                --config-path configs/rubertconv_toxic_marker.json
+            - rm -rf models/rubertconv_toxic_marker/checkpoint*
+        deps:
+            - rudetox/marker/compute_tags.py
+            - rudetox/marker/train.py
+            - configs/rubertconv_toxic_marker.json
+            - data/seq2seq_train.jsonl
+            - data/seq2seq_val.jsonl
+            - models/rubertconv
+        outs:
+            - data/marker_train.jsonl
+            - data/marker_val.jsonl
+            - models/rubertconv_toxic_marker
+
+    fill_with_marker:
+        cmd:
+            - CUDA_VISIBLE_DEVICE=0 python3 -m rudetox.marker.fill
+                --model-name models/rubertconv_toxic_marker
+                --input-path data/toxic.jsonl
+                --output-path data/marker_toxic2neutral.jsonl
+                --filler-model-name models/rubertconv
+                --text-field "text"
+                --filler-model-type "mlm"
+                --filler-mask-token "[MASK]"
+                --sample-rate 0.3
+        deps:
+            - rudetox/marker/fill.py
+            - data/toxic.jsonl
+            - models/rubertconv_toxic_marker
+            - models/rubertconv
+        outs:
+            - data/marker_toxic2neutral.jsonl
+
+    rank_toxic2neutral:
+        cmd:
+            - cat data/backtrans_toxic2neutral.jsonl > data/toxic2neutral.jsonl
+            - cat data/marker_toxic2neutral.jsonl >> data/toxic2neutral.jsonl
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
+                data/toxic2neutral.jsonl data/toxic2neutral_ranked.jsonl
+                --config-path configs/ranker.json
+                --source-field source
+                --target-field target
+        deps:
+            - rudetox/ranker.py
+            - configs/ranker.json
+            - data/backtrans_toxic2neutral.jsonl
+            - data/marker_toxic2neutral.jsonl
+        outs:
+            - data/toxic2neutral_ranked.jsonl
+
+    finalize_toxic2neutral:
+        cmd:
+            - python3 -m rudetox.filter
+                data/toxic2neutral_ranked.jsonl
+                data/toxic2neutral_final.jsonl
+                --config-path configs/filter.json
+                --source-field source
+                --target-field target
+        deps:
+            - rudetox/filter.py
+            - configs/filter.json
+            - data/toxic2neutral_ranked.jsonl
+        outs:
+            - data/toxic2neutral_final.jsonl
+
+

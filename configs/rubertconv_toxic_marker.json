@@ -2,7 +2,7 @@
     "batch_size": 32,
     "learning_rate": 0.00004,
     "num_train_epochs": 3,
-    "gradient_accumulation_steps": 2,
+    "gradient_accumulation_steps": 3,
     "max_tokens": 200,
     "logging_steps": 25,
     "save_steps": 50,

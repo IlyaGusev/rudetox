@@ -12,19 +12,24 @@ def main(
     neutral_keys = ("neutral_comment1", "neutral_comment2", "neutral_comment3")
     records = []
     with open(input_file, "r") as r:
-        header = next(r).split("\t")
+        header = next(r).strip().split("\t")
         reader = csv.reader(r, delimiter="\t", quotechar='"')
         for row in reader:
             record = dict(zip(header, row))
             toxic = record["toxic_comment"]
             neutrals = [record.get(key) for key in neutral_keys if record.get(key)]
-            for neutral in neutrals:
-                r = {
+            if neutrals:
+                for neutral in neutrals:
+                    records.append({
+                        "source": toxic,
+                        "target": neutral,
+                        "is_toxic": True
+                    })
+            else:
+                records.append({
                     "source": toxic,
-                    "target": neutral,
                     "is_toxic": True
-                }
-                records.append(r)
+                })
             if include_neutrals:
                 for n1 in neutrals:
                     for n2 in neutrals:

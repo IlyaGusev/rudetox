@@ -7,6 +7,7 @@ from transformers import AutoModel, AutoModelForSequenceClassification, AutoToke
 from tqdm import tqdm
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+DEFAULT_EMBEDDER = "cointegrated/LaBSE-en-ru"
 
 
 def gen_batch(records, batch_size):
@@ -132,7 +133,7 @@ class Classifier:
 class Embedder:
     def __init__(
         self,
-        model_name,
+        model_name=DEFAULT_EMBEDDER,
         batch_size=64,
         max_length=128,
         device=DEVICE

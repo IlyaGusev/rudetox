@@ -7,18 +7,16 @@ from tqdm import tqdm
 
 from rudetox.util.io import read_jsonl, write_jsonl
 from rudetox.util.dl import gen_batch
-from rudteox.util.text import preprocess_text
+from rudetox.util.text import preprocess_text
 
-BACKWARD_MODEL = "facebook/wmt19-en-ru"
-FORWARD_MODEL = "facebook/wmt19-ru-en"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 class BacktransParaphraser:
     def __init__(
         self,
-        forward_model_name=FORWARD_MODEL,
-        backward_model_name=BACKWARD_MODEL,
+        forward_model_name,
+        backward_model_name,
         device=DEVICE,
         num_beams=5,
         block_ngram_size=4,
@@ -75,15 +73,16 @@ class BacktransParaphraser:
                 continue
             outputs.append({
                 "source": source,
-                "target": target
+                "target": target,
+                "type": "backtrans"
             })
         return outputs
 
     def is_good_hyp(self, text):
-        has_latin = any("a" <= ch <= "z" for ch in text)
+        has_latin = any("a" <= ch.lower() <= "z" for ch in text)
         if has_latin:
             return False
-        if len(text) > 100:
+        if len(text) > 200:
             return False
         return True
 
@@ -94,9 +93,16 @@ def main(
     sample_rate,
     num_beams,
     batch_size,
-    text_field
+    text_field,
+    forward_model_name,
+    backward_model_name
 ):
-    paraphraser = BacktransParaphraser(num_beams=num_beams, batch_size=batch_size)
+    paraphraser = BacktransParaphraser(
+        num_beams=num_beams,
+        batch_size=batch_size,
+        forward_model_name=forward_model_name,
+        backward_model_name=backward_model_name
+    )
     records = read_jsonl(input_path, sample_rate)
     texts = [preprocess_text(record[text_field]) for record in records]
     output_records = paraphraser(texts)
@@ -111,5 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-beams", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--text-field", type=str, default="text")
+    parser.add_argument("--forward-model-name", type=str, required=True)
+    parser.add_argument("--backward-model-name", type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

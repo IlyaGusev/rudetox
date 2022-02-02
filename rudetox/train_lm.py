@@ -45,7 +45,7 @@ class LMDataset(Dataset):
             text,
             add_special_tokens=False,
             max_length=self.max_tokens_count,
-            padding=True,
+            padding=False,
             truncation=True
         )["input_ids"]
         input_ids.append(self.tokenizer.eos_token_id)
