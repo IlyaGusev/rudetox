@@ -21,7 +21,8 @@ def main(
     ndocs,
     key_fields,
     input_fields,
-    res_field
+    res_field,
+    name
 ):
     key_fields = key_fields.split(",")
     input_fields = input_fields.split(",")
@@ -72,7 +73,7 @@ def main(
     toloka_client = toloka.TolokaClient(read_token(token_path), 'PRODUCTION')
     template_pool = toloka_client.get_pool(template_pool_id)
     current_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    template_pool.private_name = str(current_date)
+    template_pool.private_name = str(current_date) + ": " + name
     pool = toloka_client.create_pool(template_pool)
 
     task_suites = []
@@ -105,5 +106,6 @@ if __name__ == "__main__":
     parser.add_argument("--overlap", type=int, default=5)
     parser.add_argument("--token-path", type=str, default="~/.toloka/personal_token")
     parser.add_argument("--existing-markup-path", type=str, default=None)
+    parser.add_argument("--name", type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

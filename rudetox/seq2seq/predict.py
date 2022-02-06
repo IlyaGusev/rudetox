@@ -19,6 +19,7 @@ def predict(
     output_file,
     batch_size,
     max_source_tokens_count,
+    max_target_tokens_count,
     seed,
     no_repeat_ngram_size,
     repetition_penalty,
@@ -27,7 +28,8 @@ def predict(
     num_return_sequences,
     early_stopping,
     source_field,
-    ranker_config
+    ranker_config,
+    style_token
 ):
     set_random_seed(seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -45,7 +47,12 @@ def predict(
     output_texts, scores = [], []
     records = list(read_jsonl(input_file, sample_rate))
     for batch in tqdm(gen_batch(records, batch_size)):
-        texts = [r[source_field] for r in batch]
+        texts = []
+        for r in batch:
+            text = r[source_field]
+            if style_token:
+                text = style_token + " " + text
+            texts.append(text)
         input_ids = tokenizer(
             texts,
             add_special_tokens=True,
@@ -61,7 +68,8 @@ def predict(
             length_penalty=length_penalty,
             early_stopping=early_stopping,
             num_beams=num_beams,
-            num_return_sequences=num_return_sequences
+            num_return_sequences=num_return_sequences,
+            max_length=max_target_tokens_count
         )
         output_ids = output_ids.reshape((len(batch), num_return_sequences, output_ids.size(1)))
 
@@ -103,12 +111,14 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-source-tokens-count", type=int, default=600)
+    parser.add_argument("--max-target-tokens-count", type=int, default=200)
     parser.add_argument("--repetition-penalty", type=float, default=1.0)
     parser.add_argument("--length-penalty", type=float, default=1.0)
     parser.add_argument("--no-repeat-ngram-size", type=int, default=4)
     parser.add_argument("--num-beams", type=int, default=5)
     parser.add_argument("--num-return-sequences", type=int, default=1)
     parser.add_argument("--early-stopping", action="store_true", default=False)
+    parser.add_argument("--style-token", type=str, default=None)
     parser.add_argument("--source-field", type=str, default="source")
     parser.add_argument("--ranker-config", type=str, default=None)
     args = parser.parse_args()

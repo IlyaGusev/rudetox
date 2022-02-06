@@ -15,6 +15,7 @@ GEN_PATH="data/seq2seq_gen.jsonl"
 
 mkdir -p data;
 
+
 # https://github.com/skoltech-nlp/russe_detox_2022
 wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/train.tsv -O $DETOX_TRAIN_PATH;
 wget https://raw.githubusercontent.com/skoltech-nlp/russe_detox_2022/main/data/input/dev.tsv -O $DETOX_VAL_PATH;

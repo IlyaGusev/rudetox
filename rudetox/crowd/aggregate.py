@@ -15,12 +15,15 @@ def aggregate(
     records,
     res_field,
     key_fields,
-    min_agreement=0.7
+    min_agreement=0.7,
+    overlap=5
 ):
     records.sort(key=lambda x: x["assignment_id"])
 
     results = defaultdict(list)
     for r in records:
+        if len(results[get_key(r, key_fields)]) >= overlap:
+            continue
         results[get_key(r, key_fields)].append(r[res_field])
 
     data = {get_key(r, key_fields): r for r in records}
@@ -87,7 +90,7 @@ def main(
     token_path,
     agg_output,
     raw_output,
-    pools_path,
+    pools,
     input_fields,
     res_field,
     key_fields
@@ -96,7 +99,7 @@ def main(
     input_fields = input_fields.split(",")
 
     toloka_client = toloka.TolokaClient(read_token(token_path), 'PRODUCTION')
-    pool_ids = read_pools_ids(pools_path)
+    pool_ids = [int(pid) for pid in pools.split(",")]
 
     records = []
     for pool_id in pool_ids:
@@ -121,7 +124,7 @@ if __name__ == "__main__":
     parser.add_argument("--token-path", type=str, default="~/.toloka/personal_token")
     parser.add_argument("--agg-output", type=str, required=True)
     parser.add_argument("--raw-output", type=str, required=True)
-    parser.add_argument("--pools-path", type=str, required=True)
+    parser.add_argument("--pools", type=str, required=True)
     parser.add_argument("--res-field", type=str, default="result")
     parser.add_argument("--key-fields", type=str, required=True)
     args = parser.parse_args()

@@ -1,7 +1,7 @@
 {
-    "style_model_name": "models/style",
+    "style_model_name": "models/rubertconv_toxic_clf",
     "meaning_model_name": "models/sim",
     "fluency_model_name": "models/fluency",
     "use_clf_filter": true,
-    "weights": [0.2, 0.2, 1.0, 0.0]
+    "weights": [1.0, 0.2, 0.2, 0.0]
 }

@@ -2,37 +2,49 @@
     "augmentations": [
         {
             "name": "replace_yo",
-            "rate": 0.2
+            "rate": 0.4
         },
         {
             "name": "rm_exclamation",
-            "rate": 0.13
+            "rate": 0.26
         },
         {
             "name": "add_exclamation",
-            "rate": 0.03
+            "rate": 0.06
         },
         {
             "name": "rm_question",
-            "rate": 0.1
+            "rate": 0.2
         },
         {
             "name": "fix_case"
         },
         {
             "name": "concat_with_toxic",
-            "rate": 0.025,
+            "rate": 0.05,
             "label": 1
         },
         {
             "name": "concat_non_toxic",
-            "rate": 0.025,
+            "rate": 0.05,
             "label": 0
         },
         {
             "name": "add_toxic_words",
-            "rate": 0.025,
+            "rate": 0.05,
             "label": 1
+        },
+        {
+            "name": "add_typos",
+            "rate": 0.05
+        },
+        {
+            "name": "toxic_words_mask_char",
+            "rate": 0.5
+        },
+        {
+            "name": "toxic_words_add_typos",
+            "rate": 0.5
         }
     ]
 }

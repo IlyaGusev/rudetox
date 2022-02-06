@@ -7,7 +7,7 @@ from transformers import AutoModel, AutoModelForSequenceClassification, AutoToke
 from tqdm import tqdm
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DEFAULT_EMBEDDER = "cointegrated/LaBSE-en-ru"
+DEFAULT_EMBEDDER = "models/sim"
 
 
 def gen_batch(records, batch_size):

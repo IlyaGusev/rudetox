@@ -54,4 +54,5 @@ CUDA_VISIBLE_DEVICES=0 python3.9 -m rudetox.clf.check \
     --test-path $TEST_FILE \
     --toxic-vocab-path $VOCAB_FILE \
     --sample-rate $SAMPLE_RATE \
-    --save-path $OUT_FILE;
+    --save-path $OUT_FILE \
+    --manual-test-path data/custom_test.jsonl;

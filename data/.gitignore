@@ -28,3 +28,14 @@
 /backtrans_toxic2neutral_final.jsonl
 /marker_toxic2neutral.jsonl
 /detox_test.tsv
+/toxic2neutral_ranked.jsonl
+/toxic2neutral_final.jsonl
+/clf_train_squeeze.jsonl
+/clf_train_aug.jsonl
+/clf_val_squeeze.jsonl
+/clf_val_aug.jsonl
+/seq2seq_test.jsonl
+/seq2seq_train_extended.jsonl
+/seq2seq_val_extended.jsonl
+/seq2seq_train_aug.jsonl
+/seq2seq_val_aug.jsonl

@@ -10,5 +10,5 @@
     "eval_steps": 100,
     "warmup_steps": 100,
     "model_type": "seq2seq_lm",
-    "model_name": "cointegrated/rut5-base"
+    "model_name": "models/rut5_base"
 }

@@ -9,6 +9,7 @@ def is_good_record(r, config):
     scores = r["scores"]
     target = r["target"]
     source = r["source"]
+    ban_words = config.get("ban_words", [])
     if scores["style"] > config.get("max_style", 1.0):
         return False, "max_style"
     if scores["style"] < config.get("min_style", 0.0):

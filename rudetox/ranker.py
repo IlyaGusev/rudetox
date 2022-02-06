@@ -126,20 +126,28 @@ def main(
     with open(config_path) as r:
         config = json.load(r)
 
+    mapping = defaultdict(set)
+    types = dict()
+
     ranker = Ranker(**config)
     records = list(read_jsonl(input_path, sample_rate))
-    mapping = defaultdict(set)
     for r in records:
         mapping[r[source_field]].add(r[target_field])
+        if "type" in r:
+            types[r[target_field]] = r["type"]
+
     output_records = []
     for source, targets in tqdm(mapping.items()):
         targets = list(targets)
         best_target, scores = ranker(source, targets)
-        output_records.append({
+        r = {
             "source": source,
             "target": best_target,
             "scores": scores
-        })
+        }
+        if best_target in types:
+            r["type"] = types[best_target]
+        output_records.append(r)
     write_jsonl(output_records, output_path)
 
 

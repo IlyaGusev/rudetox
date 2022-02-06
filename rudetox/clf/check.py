@@ -18,8 +18,8 @@ from checklist.perturb import Perturb
 
 from rudetox.util.io import read_jsonl, read_lines
 from rudetox.util.dl import pipe_predict
-from rudetox.clf.transformations import replace_yo, rm_exclamation, add_exclamation, rm_question, fix_case
-from rudetox.clf.transformations import concat_with_toxic, concat_non_toxic, add_toxic_words
+from rudetox.transformations import form_transformations
+from rudetox.transformations import concat_with_toxic, concat_non_toxic, add_toxic_words
 
 
 class TextDataset(Dataset):
@@ -45,6 +45,10 @@ def main(
 ):
     assert os.path.exists(test_path)
     random.seed(seed)
+
+    toxic_words = []
+    if toxic_vocab_path is not None:
+        toxic_words = read_lines(toxic_vocab_path)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_num = 0 if device == "cuda" else -1
@@ -72,34 +76,53 @@ def main(
     pred_zeros_texts = [r["text"] for r in records if r["prediction"] == 0]
     pred_ones_texts = [r["text"] for r in records if r["prediction"] == 1]
 
+    transformations = form_transformations(pred_ones_texts, pred_zeros_texts, toxic_words)
     inv_checks = [
         {
-            "func": replace_yo,
+            "func": "replace_yo",
             "name": "ё -> е",
             "capability": "Robustness",
             "description": ""
         },
         {
-            "func": rm_exclamation,
+            "func": "rm_exclamation",
             "name": "rm !",
             "capability": "Robustness",
             "description": ""
         },
         {
-            "func": add_exclamation,
+            "func": "add_exclamation",
             "name": "add !",
             "capability": "Robustness",
             "description": ""
         },
         {
-            "func": fix_case,
+            "func": "fix_case",
             "name": "CAPS -> lower",
             "capability": "Robustness",
             "description": ""
         },
         {
-            "func": rm_question,
+            "func": "rm_question",
             "name": "rm ?",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": "add_typos",
+            "name": "Add typos",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": "toxic_words_mask_char",
+            "name": "Char masking of toxic words",
+            "capability": "Robustness",
+            "description": ""
+        },
+        {
+            "func": "toxic_words_add_typos",
+            "name": "Add typos to toxic words",
             "capability": "Robustness",
             "description": ""
         }
@@ -107,7 +130,7 @@ def main(
 
     suite = TestSuite()
     for check in inv_checks:
-        data = Perturb.perturb(test_dataset, check["func"], keep_original=True).data
+        data = Perturb.perturb(test_dataset, transformations[check["func"]], keep_original=True, nsamples=1000).data
         if not data:
             continue
         suite.add(INV(
@@ -131,7 +154,7 @@ def main(
         capability="Logic",
         description=""
     ))
-    if toxic_vocab_path is not None:
+    if toxic_words:
         toxic_words = read_lines(toxic_vocab_path)
         suite.add(MFT(
             [add_toxic_words(t, toxic_words) for t in pred_zeros_texts],

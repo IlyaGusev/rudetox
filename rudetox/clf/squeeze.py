@@ -112,11 +112,12 @@ def main(
     assert records
     print("{} records read".format(len(records)))
 
-    if os.path.exists(initial_records_path):
+    if initial_records_path and os.path.exists(initial_records_path):
         initial_records = list(read_jsonl(initial_records_path))
     else:
         initial_records = initial_clustering(records, embedding_field, initial_records_count)
-        write_jsonl(initial_records, initial_records_path)
+        if initial_records_path:
+            write_jsonl(initial_records, initial_records_path)
     print("{} initial records".format(len(initial_records)))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     parser.add_argument("--clf-config-path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--initial-records-count", type=int, default=10000)
-    parser.add_argument("--initial-records-path", type=str, default="initial.jsonl")
+    parser.add_argument("--initial-records-path", type=str, default=None)
     parser.add_argument("--infer-models-count", type=int, default=5)
     parser.add_argument("--infer-samples-count", type=int, default=30000)
     parser.add_argument("--save-top-samples-count", type=int, default=3000)

@@ -14,10 +14,9 @@ def main(
     input_path,
     output_path,
     config_path,
-    text_field,
-    label_field,
-    seed,
-    bad_vocab_path
+    source_field,
+    bad_vocab_path,
+    seed
 ):
     random.seed(seed)
     with open(config_path) as r:
@@ -25,10 +24,8 @@ def main(
     augmentations = config["augmentations"]
 
     records = list(read_jsonl(input_path))
-    toxic_texts = [r[text_field] for r in records if r[label_field] == 1]
-    non_toxic_texts = [r[text_field] for r in records if r[label_field] == 0]
     toxic_words = read_lines(bad_vocab_path)
-    transformations = form_transformations(toxic_texts, non_toxic_texts, toxic_words)
+    transformations = form_transformations(toxic_words=toxic_words)
 
     counts = Counter()
     augmented_records = []
@@ -39,18 +36,14 @@ def main(
             if random.random() > aug_rate:
                 continue
 
-            augmented_text = transformations[aug_name](record[text_field])
-            if not augmented_text:
+            augmented_source = transformations[aug_name](record[source_field])
+            if not augmented_source:
                 continue
 
             counts[aug_name] += 1
             new_record = copy.deepcopy(record)
-            new_record[text_field] = augmented_text
+            new_record[source_field] = augmented_source
             new_record["aug"] = aug_name
-
-            if "label" in aug:
-                label = int(aug["label"])
-                new_record["label"] = label
             augmented_records.append(new_record)
 
     for name, cnt in counts.most_common():
@@ -65,8 +58,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-path", type=str, required=True)
     parser.add_argument("--bad-vocab-path", type=str, required=True)
     parser.add_argument("--config-path", type=str, required=True)
-    parser.add_argument("--text-field", type=str, default="text")
-    parser.add_argument("--label-field", type=str, default="label")
+    parser.add_argument("--source-field", type=str, default="source")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     main(**vars(args))

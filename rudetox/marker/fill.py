@@ -14,7 +14,7 @@ from rudetox.util.text import preprocess_text
 
 
 class WordFiller:
-    def __init__(self, model_name, device, mask_token, model_type, top_k=10, eos_token_id=250098):
+    def __init__(self, model_name, device, mask_token, model_type, top_k, eos_token_id=250098):
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.word_tokenizer = BasicTokenizer(do_lower_case=False)
         self.model_type = model_type
@@ -125,7 +125,8 @@ def main(
     max_replace_words,
     seed,
     filler_mask_token,
-    filler_model_type
+    filler_model_type,
+    top_k
 ):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     device_num = 0 if device == "cuda" else -1
@@ -150,7 +151,8 @@ def main(
             filler_model_name,
             device,
             mask_token=filler_mask_token,
-            model_type=filler_model_type
+            model_type=filler_model_type,
+            top_k=top_k
         )
 
     records = []
@@ -205,6 +207,7 @@ if __name__ == "__main__":
     parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--replace-min-prob", type=float, default=0.4)
     parser.add_argument("--max-replace-words", type=int, default=4)
+    parser.add_argument("--top-k", type=int, default=4)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--filler-model-name", type=str, default=None)
     parser.add_argument("--input-path", type=str, required=True)

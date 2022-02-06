@@ -17,24 +17,58 @@ stages:
             - data/seq2seq_gen_val.jsonl
 
     prepare_seq2seq_dataset:
-        cmd: bash scripts/prepare_seq2seq_dataset.sh
+        cmd:
+            - python3 -m rudetox.seq2seq.converters.detox
+                --input-file data/detox_train.tsv
+                --output-file data/seq2seq_train.jsonl
+            - python3 -m rudetox.seq2seq.converters.detox
+                --input-file data/detox_dev.tsv
+                --output-file data/seq2seq_val.jsonl
+            - python3 -m rudetox.seq2seq.converters.detox
+                --input-file data/detox_train.tsv
+                --output-file data/seq2seq_train_extended.jsonl
+                --include-auto-neutrals
+                --include-auto-toxic
+                --include-reverse
+            - python3 -m rudetox.seq2seq.converters.detox
+                --input-file data/detox_dev.tsv
+                --output-file data/seq2seq_val_extended.jsonl
+                --include-auto-neutrals
+                --include-auto-toxic
+                --include-reverse
+            - python3 -m rudetox.seq2seq.converters.detox
+                --input-file data/detox_test.tsv
+                --output-file  data/seq2seq_test.jsonl
+            - python3 -m rudetox.seq2seq.augment
+                --input-path data/seq2seq_train.jsonl
+                --output-path data/seq2seq_train_aug.jsonl
+                --config-path configs/seq2seq_augmentations.json
+                --bad-vocab-path data/bad_vocab.txt
+            - python3 -m rudetox.seq2seq.augment
+                --input-path data/seq2seq_val.jsonl
+                --output-path data/seq2seq_val_aug.jsonl
+                --config-path configs/seq2seq_augmentations.json
+                --bad-vocab-path data/bad_vocab.txt
         deps:
-            - scripts/prepare_seq2seq_dataset.sh
             - rudetox/seq2seq/converters/detox.py
+            - rudetox/seq2seq/augment.py
+            - configs/seq2seq_augmentations.json
             - data/detox_train.tsv
             - data/detox_dev.tsv
             - data/detox_test.tsv
-            - data/seq2seq_gen.jsonl
-            - data/seq2seq_gen_train.jsonl
-            - data/seq2seq_gen_val.jsonl
+            - data/bad_vocab.txt
         outs:
             - data/seq2seq_train.jsonl
-            - data/seq2seq_united_train.jsonl
+            - data/seq2seq_train_aug.jsonl
             - data/seq2seq_val.jsonl
+            - data/seq2seq_val_aug.jsonl
             - data/seq2seq_test.jsonl
+            - data/seq2seq_train_extended.jsonl
+            - data/seq2seq_val_extended.jsonl
 
     prepare_clf_dataset:
-        cmd: bash scripts/prepare_clf_dataset.sh
+        cmd:
+            - bash scripts/prepare_clf_dataset.sh
         deps:
             - scripts/prepare_clf_dataset.sh
             - rudetox/clf/converters/detox.py
@@ -56,19 +90,23 @@ stages:
         outs:
             - data/clf_all.jsonl
             - data/clf_train.jsonl
+            - data/clf_train_aug.jsonl
             - data/clf_val.jsonl
+            - data/clf_val_aug.jsonl
             - data/clf_test.jsonl
 
     download_models:
         cmd:
             - mkdir -p models
-            - rm -rf models/style models/sim models/fluency models/en_ru models/ru_en models/rubertconv
+            - rm -rf models/style models/sim models/fluency models/en_ru
+                models/ru_en models/rubertconv models/rut5_base
             - git clone https://huggingface.co/SkolkovoInstitute/russian_toxicity_classifier models/style
             - git clone https://huggingface.co/cointegrated/LaBSE-en-ru models/sim
             - git clone https://huggingface.co/SkolkovoInstitute/rubert-base-corruption-detector models/fluency
             - git clone https://huggingface.co/facebook/wmt19-en-ru models/en_ru
             - git clone https://huggingface.co/facebook/wmt19-ru-en models/ru_en
             - git clone https://huggingface.co/DeepPavlov/rubert-base-cased-conversational models/rubertconv
+            - git clone https://huggingface.co/sberbank-ai/ruT5-base models/rut5_base
         outs:
             - models/style
             - models/sim
@@ -76,22 +114,23 @@ stages:
             - models/en_ru
             - models/ru_en
             - models/rubertconv
+            - models/rut5_base
 
     train_clf:
         cmd:
             - mkdir -p models
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.clf.train
                 --config-path configs/rubertconv_toxic_clf.json
-                --train-path data/clf_train.jsonl
-                --val-path data/clf_val.jsonl
+                --train-path data/clf_train_aug.jsonl
+                --val-path data/clf_val_aug.jsonl
                 --test-path data/clf_test.jsonl
                 --out-dir models/rubertconv_toxic_clf
             - rm -rf models/rubertconv_toxic_clf/checkpoint*
         deps:
             - rudetox/clf/train.py
             - configs/rubertconv_toxic_clf.json
-            - data/clf_train.jsonl
-            - data/clf_val.jsonl
+            - data/clf_train_aug.jsonl
+            - data/clf_val_aug.jsonl
             - data/clf_test.jsonl
         outs:
             - models/rubertconv_toxic_clf
@@ -101,17 +140,16 @@ stages:
             - mkdir -p models
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
                 --config-path configs/rut5_detox.json
-                --train-path data/seq2seq_united_train.jsonl
-                --val-path data/seq2seq_val.jsonl
+                --train-path data/seq2seq_train_aug.jsonl
+                --val-path data/seq2seq_val_aug.jsonl
                 --out-dir models/rut5_detox
-                --source-field "source"
-                --target-field "target"
             - rm -rf models/rut5_detox/checkpoint*
         deps:
             - rudetox/seq2seq/train.py
             - configs/rut5_detox.json
-            - data/seq2seq_united_train.jsonl
-            - data/seq2seq_val.jsonl
+            - models/rut5_base
+            - data/seq2seq_train_aug.jsonl
+            - data/seq2seq_val_aug.jsonl
         outs:
             - models/rut5_detox
 
@@ -139,17 +177,17 @@ stages:
                 --input-file data/seq2seq_test.jsonl
                 --output-file predictions/rut5_detox_ranker.jsonl
                 --model-name models/rut5_detox
-                --num-beams 20
-                --num-return-sequences 20
-                --batch-size 2
+                --num-beams 4
+                --num-return-sequences 4
+                --batch-size 4
                 --ranker-config configs/ranker.json
         deps:
+            - rudetox/seq2seq/predict.py
             - models/rut5_detox
-            - models/style
+            - models/rubertconv_toxic_clf
             - models/fluency
             - models/sim
             - configs/ranker.json
-            - rudetox/seq2seq/predict.py
             - data/seq2seq_test.jsonl
         outs:
             - predictions/rut5_detox_ranker.jsonl
@@ -296,7 +334,6 @@ stages:
                 --text-field "text"
                 --filler-model-type "mlm"
                 --filler-mask-token "[MASK]"
-                --sample-rate 0.3
         deps:
             - rudetox/marker/fill.py
             - data/toxic.jsonl

@@ -30,7 +30,8 @@ def main(
 
     write_jsonl(train_records, train_path)
     write_jsonl(val_records, val_path)
-    write_jsonl(test_records, test_path)
+    if test_path:
+        write_jsonl(test_records, test_path)
 
 
 if __name__ == "__main__":
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     parser.add_argument("--input-path", required=True, type=str)
     parser.add_argument("--train-path", required=True, type=str)
     parser.add_argument("--val-path", required=True, type=str)
-    parser.add_argument("--test-path", required=True, type=str)
+    parser.add_argument("--test-path", default=None)
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--val-border", default=0.8, type=float)
     parser.add_argument("--test-border", default=0.9, type=float)

@@ -5,9 +5,9 @@ import json
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, Trainer, TrainingArguments, logging
-from transformers import EncoderDecoderModel, AutoModelForSeq2SeqLM, AutoModelForCausalLM
+from transformers import EncoderDecoderModel, AutoModelForSeq2SeqLM
 
-from rudetox.seq2seq.dataset import SummarySeq2SeqDataset, SummaryLMDataset
+from rudetox.seq2seq.dataset import Seq2seqDataset
 from rudetox.util.io import read_jsonl
 from rudetox.util.dl import set_random_seed, fix_tokenizer
 
@@ -23,7 +23,8 @@ def train(
     report_to,
     seed,
     source_field,
-    target_field
+    target_field,
+    style_field
 ):
     set_random_seed(seed)
     logging.set_verbosity_info()
@@ -41,10 +42,9 @@ def train(
     val_records = list(read_jsonl(val_path))
     random.shuffle(train_records)
 
-    dataset_class = SummaryLMDataset if model_type in ("causal_lm",) else SummarySeq2SeqDataset
+    dataset_class = Seq2seqDataset
     max_source_tokens_count = config["max_source_tokens_count"]
     max_target_tokens_count = config["max_target_tokens_count"]
-    only_summary_loss = config.get("only_summary_loss", False)
     train_dataset_args = {
         "original_records": train_records,
         "sample_rate": train_sample_rate,
@@ -52,7 +52,8 @@ def train(
         "max_source_tokens_count": max_source_tokens_count,
         "max_target_tokens_count": max_target_tokens_count,
         "source_field": source_field,
-        "target_field": target_field
+        "target_field": target_field,
+        "style_field": style_field
     }
     val_dataset_args = {
         "original_records": val_records,
@@ -61,11 +62,9 @@ def train(
         "max_source_tokens_count": max_source_tokens_count,
         "max_target_tokens_count": max_target_tokens_count,
         "source_field": source_field,
-        "target_field": target_field
+        "target_field": target_field,
+        "style_field": style_field
     }
-    if only_summary_loss:
-        train_dataset_args["only_summary_loss"] = True
-        val_dataset_args["only_summary_loss"] = True
     train_dataset = dataset_class(**train_dataset_args)
     val_dataset = dataset_class(**val_dataset_args)
 
@@ -74,8 +73,6 @@ def train(
         model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name)
     elif model_type == "seq2seq_lm":
         model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    elif model_type == "causal_lm":
-        model = AutoModelForCausalLM.from_pretrained(model_name)
     else:
         assert False
 
@@ -158,7 +155,8 @@ if __name__ == "__main__":
     parser.add_argument("--val-sample-rate", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--report-to", type=str, default="none")
-    parser.add_argument("--source-field", type=str, default="text")
-    parser.add_argument("--target-field", type=str, default="summary")
+    parser.add_argument("--source-field", type=str, default="source")
+    parser.add_argument("--target-field", type=str, default="target")
+    parser.add_argument("--style-field", type=str, default=None)
     args = parser.parse_args()
     train(**vars(args))
