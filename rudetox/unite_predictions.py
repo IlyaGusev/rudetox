@@ -1,51 +1,68 @@
 import argparse
+import json
+import os
+from collections import Counter
 
 import numpy as np
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 
-from util.dl import pipe_predict
+from rudetox.ranker import Ranker
 
 
 def main(
-    base_path,
-    additional_path,
-    clf_model_name,
-    output_path
+    predictions,
+    source_path,
+    output_path,
+    ranker_config_path
 ):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    device_num = 0 if device == "cuda" else -1
+    all_targets = []
+    for path in predictions:
+        texts = []
+        with open(path) as r:
+            for line in r:
+                line = line.strip()
+                texts.append(line)
+        all_targets.append(texts)
+    n = len(all_targets[0])
+    ttargets = []
+    for i in range(n):
+        ttargets.append([all_targets[j][i] for j in range(len(all_targets))])
 
-    model = AutoModelForSequenceClassification.from_pretrained(clf_model_name)
-    tokenizer = AutoTokenizer.from_pretrained(clf_model_name)
-    model.to(device)
-
-    base_texts = []
-    with open(base_path) as r:
+    sources = []
+    with open(source_path) as r:
+        next(r)
         for line in r:
-            line = line.strip()
-            base_texts.append(line)
-    additional_texts = []
-    with open(additional_path) as r:
-        for line in r:
-            line = line.strip()
-            additional_texts.append(line)
+            sources.append(line.strip())
 
-    pipe = pipeline("text-classification", model=model, tokenizer=tokenizer, framework="pt", device=device_num)
-    y_pred, scores = pipe_predict(base_texts, pipe)
-    for i, (label, text) in enumerate(zip(y_pred, additional_texts)):
-        if label == 1:
-            base_texts[i] = text
+    assert os.path.exists(ranker_config_path)
+    with open(ranker_config_path) as r:
+        config = json.load(r)
+    ranker = Ranker(**config)
+
+
+    cnt = Counter()
+    scores = []
     with open(output_path, "w") as w:
-        for text in base_texts:
-            w.write(text.strip() + "\n")
+        for source, targets in zip(sources, ttargets):
+            best_target, s = ranker(source, targets)
+            scores.append(s)
+            print(best_target)
+            cnt[targets.index(best_target)] += 1
+            w.write(best_target.strip() + "\n")
+
+    print(cnt.most_common())
+    print("Style:", sum([s["style"] for s in scores]) / n)
+    print("Fluency:", sum([s["fluency"] for s in scores]) / n)
+    print("Sim:", sum([s["sim"] for s in scores]) / n)
+
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--base-path", type=str, required=True)
-    parser.add_argument("--additional-path", type=str, required=True)
+    parser.add_argument("predictions", nargs='+')
+    parser.add_argument("--source-path", type=str, required=True)
     parser.add_argument("--output-path", type=str, required=True)
-    parser.add_argument("--clf-model-name", type=str, required=True)
+    parser.add_argument("--ranker-config-path", type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

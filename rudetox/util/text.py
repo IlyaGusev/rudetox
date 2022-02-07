@@ -52,10 +52,9 @@ def fix_punct(text):
         else:
             fixed_text.extend(g)
     text = "".join(fixed_text)
-    text = text.replace(",", ", ").replace(".", ". ")
     text = text.replace(" ,", ", ").replace(" .", ".")
-    text = text.replace("!", "! ").replace("?", "? ")
     text = text.replace(" !", "!").replace(" ?", "?")
+    text = text.replace("…", "...")
     return text
 
 
@@ -63,6 +62,7 @@ PIPELINE = (
     remove_emoji,
     remove_users,
     remove_urls,
+    remove_multispaces,
     fix_punct,
     remove_multispaces
 )
@@ -71,5 +71,5 @@ PIPELINE = (
 def preprocess_text(text, max_words=100):
     for step in PIPELINE:
         text = step(text)
-    text = " ".join(text.split()[:max_words])
+    text = " ".join(text.split(" ")[:max_words])
     return text

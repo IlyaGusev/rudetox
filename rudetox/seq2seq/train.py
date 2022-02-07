@@ -32,7 +32,7 @@ def train(
         config = json.load(r)
 
     model_type = config["model_type"]
-    assert model_type in ("causal_lm", "encoder_decoder", "seq2seq_lm")
+    assert model_type in ("encoder_decoder", "seq2seq_lm")
     model_name = config["model_name"]
     tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
     tokenizer = fix_tokenizer(tokenizer)

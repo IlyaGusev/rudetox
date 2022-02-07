@@ -58,8 +58,13 @@ class Seq2seqDataset(Seq2seqBaseDataset):
         if style is not None:
             style_token = "<extra_id_1>" if style == 1 else "<extra_id_0>"
             source = style_token + " " + source
+        if isinstance(source, str):
+            inputs = {"text": source}
+        else:
+            inputs = {"text": source[0], "text_pair": source[1]}
+
         inputs = self.tokenizer(
-            source,
+            **inputs,
             add_special_tokens=True,
             max_length=self.max_source_tokens_count,
             padding="max_length",

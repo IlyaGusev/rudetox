@@ -15,14 +15,14 @@ from rudetox.util.dl import gen_batch
 
 
 class LabeledTokensDataset(Dataset):
-    def __init__(self, records, max_tokens, tokenizer):
+    def __init__(self, records, max_tokens, tokenizer, text_field, labels_field):
         self.tokenizer = tokenizer
         self.max_tokens = max_tokens
         self.records = list()
         for r in tqdm(records):
-            inputs = self.embed_record(r["text"])
+            inputs = self.embed_record(r[text_field])
             true_inputs = [i for i in inputs["input_ids"].tolist() if i != tokenizer.pad_token_id]
-            labels = r["labels"]
+            labels = r[labels_field]
             assert len(true_inputs) == len(labels)
             labels = labels[:self.max_tokens] + [0 for _ in range(self.max_tokens - len(labels))]
             inputs["labels"] = labels
@@ -53,7 +53,9 @@ def main(
     config_path,
     seed,
     out_dir,
-    sample_rate
+    sample_rate,
+    text_field,
+    labels_field
 ):
     train_records = list(read_jsonl(train_path, sample_rate))
     val_records = list(read_jsonl(val_path, sample_rate))
@@ -69,8 +71,8 @@ def main(
     max_tokens = config["max_tokens"]
     model_name = config["model_name"]
     tokenizer = AutoTokenizer.from_pretrained(model_name)
-    train_dataset = LabeledTokensDataset(train_records, max_tokens, tokenizer)
-    val_dataset = LabeledTokensDataset(val_records, max_tokens, tokenizer)
+    train_dataset = LabeledTokensDataset(train_records, max_tokens, tokenizer, text_field, labels_field)
+    val_dataset = LabeledTokensDataset(val_records, max_tokens, tokenizer, text_field, labels_field)
 
     num_labels = config["num_labels"]
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -120,7 +122,6 @@ def main(
     model = model.to("cpu")
     logits = model(**tokenizer(sample, add_special_tokens=True, return_tensors="pt")).logits.squeeze(0)
     print(sample)
-    print(logits[:, 1].tolist())
     print(torch.argmax(logits, dim=1).tolist())
 
 
@@ -132,5 +133,7 @@ if __name__ == "__main__":
     parser.add_argument("--config-path", type=str, required=True)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample-rate", type=float, default=1.0)
+    parser.add_argument("--text-field", type=str, required=True)
+    parser.add_argument("--labels-field", type=str, required=True)
     args = parser.parse_args()
     main(**vars(args))

@@ -49,7 +49,6 @@ def fix_tokenizer(tokenizer):
 
     if tokenizer.sep_token_id in (None, tokenizer.vocab_size) and "bos_token" in special_tokens:
         special_tokens["sep_token"] = special_tokens["bos_token"]
-
     tokenizer.add_special_tokens(special_tokens)
 
     print("Vocab size: ", tokenizer.vocab_size)
@@ -68,7 +67,7 @@ def pipe_predict(data, pipe):
     if isinstance(raw_preds[0], list):
         for sample in raw_preds:
             length = max([s["index"] for s in sample]) + 1
-            sample_y_pred = [-1 for _ in range(length)]
+            sample_y_pred = [0 for _ in range(length)]
             sample_y_scores = [-100.0 for _ in range(length)]
             for s in sample:
                 sample_y_pred[s["index"]] = label2id[s["entity"]]

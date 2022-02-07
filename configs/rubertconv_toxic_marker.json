@@ -1,21 +1,25 @@
 {
-    "batch_size": 32,
-    "learning_rate": 0.00004,
-    "num_train_epochs": 3,
-    "gradient_accumulation_steps": 3,
-    "max_tokens": 200,
+    "batch_size": 64,
+    "learning_rate": 0.00005,
+    "num_train_epochs": 4,
+    "gradient_accumulation_steps": 2,
+    "max_tokens": 100,
     "logging_steps": 25,
     "save_steps": 50,
     "eval_steps": 50,
     "warmup_steps": 50,
     "model_name": "DeepPavlov/rubert-base-cased-conversational",
-    "num_labels": 2,
+    "num_labels": 4,
     "id2label": {
-        "0": "neutral",
-        "1": "toxic"
+        "0": "equal",
+        "1": "delete",
+        "2": "replace",
+        "3": "insert"
     },
     "label2id": {
-        "neutral": 0,
-        "toxic": 1
+        "equal": 0,
+        "delete": 1,
+        "replace": 2,
+        "insert": 3
     }
 }
