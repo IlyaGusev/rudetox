@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer, AutoModelForTokenClassification
-from transformers import Trainer, TrainingArguments, pipeline
+from transformers import Trainer, TrainingArguments, pipeline, AdamW, get_cosine_schedule_with_warmup
 from tqdm import tqdm
 from sklearn.metrics import classification_report
 
@@ -75,8 +75,13 @@ def main(
     val_dataset = LabeledTokensDataset(val_records, max_tokens, tokenizer, text_field, labels_field)
 
     num_labels = config["num_labels"]
+    override_model_params = config.get("model_params", {})
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = AutoModelForTokenClassification.from_pretrained(model_name, num_labels=num_labels)
+    model = AutoModelForTokenClassification.from_pretrained(
+        model_name,
+        num_labels=num_labels,
+        **override_model_params
+    )
     model = model.to(device)
     model.config.id2label = {int(key): value for key, value in config["id2label"].items()}
     model.config.label2id = config["label2id"]
@@ -89,6 +94,7 @@ def main(
     learning_rate = config["learning_rate"]
     warmup_steps = config["warmup_steps"]
     num_train_epochs = config["num_train_epochs"]
+    lr_scheduler_type = config.get("lr_scheduler_type", "linear")
     training_args = TrainingArguments(
         output_dir=out_dir,
         evaluation_strategy="steps",
@@ -104,7 +110,8 @@ def main(
         gradient_accumulation_steps=gradient_accumulation_steps,
         report_to="none",
         load_best_model_at_end=True,
-        save_total_limit=1
+        save_total_limit=1,
+        lr_scheduler_type=lr_scheduler_type
     )
 
     trainer = Trainer(

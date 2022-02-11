@@ -85,3 +85,33 @@ class Seq2seqDataset(Seq2seqBaseDataset):
             labels[outputs["attention_mask"].squeeze(0) == 0] = -100
             inputs["labels"] = labels
         return inputs
+
+
+class TextDataset(Dataset):
+    def __init__(self, original_records, tokenizer, max_source_tokens_count, text_field):
+        self.original_records = original_records
+        self.tokenizer = tokenizer
+        self.max_source_tokens_count = max_source_tokens_count
+
+        self.records = []
+        for record in tqdm(original_records):
+            tensors = self.convert_text(record[text_field])
+            self.records.append(tensors)
+
+    def __len__(self):
+        return len(self.records)
+
+    def __getitem__(self, index):
+        return self.records[index]
+
+    def convert_text(self, text):
+        inputs = self.tokenizer(
+            text,
+            add_special_tokens=True,
+            max_length=self.max_source_tokens_count,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt"
+        )
+        inputs = {k: v.squeeze(0) for k, v in inputs.items()}
+        return inputs

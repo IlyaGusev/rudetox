@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, BasicTokenizer
 
 from rudetox.util.io import read_jsonl, write_jsonl
 from rudetox.util.text import preprocess_text
-
+from rudetox.marker.util import MASK_TEMPLATE
 
 TAGS_TO_LABELS = {
     "equal": 0,
@@ -13,7 +13,6 @@ TAGS_TO_LABELS = {
     "replace": 2,
     "insert": 3
 }
-MASK_TEMPLATE = "<extra_id_{}>"
 
 
 def compute_tags(
@@ -25,29 +24,25 @@ def compute_tags(
     source_lower, target_lower = source.lower(), target.lower()
     source_encoded, target_encoded = fast_tokenizer.encode_plus(source), fast_tokenizer.encode_plus(target)
 
-    source_lower_ids = tokenizer(source_lower, add_special_tokens=False).input_ids
-    target_lower_ids = tokenizer(target_lower, add_special_tokens=False).input_ids
+    word_tokenizer = BasicTokenizer(strip_accents=False)
+    source_lower_tokens = word_tokenizer.tokenize(source_lower)
+    target_lower_tokens = word_tokenizer.tokenize(target_lower)
     indices, end_index = [], 0
-    s = SequenceMatcher(None, source_lower_ids, target_lower_ids)
+    s = SequenceMatcher(None, source_lower_tokens, target_lower_tokens)
     for tag, i1, i2, j1, j2 in s.get_opcodes():
-        target_part = tokenizer.decode(
-            target_lower_ids[j1:j2],
-            clean_up_tokenization_spaces=True
-        )
-        target_part = target_part.replace(tokenizer.unk_token, "").strip("# ")
-        source_part = tokenizer.decode(
-            source_lower_ids[i1:i2],
-            clean_up_tokenization_spaces=True
-        )
-        source_part = source_part.replace(tokenizer.unk_token, "").strip("# ")
+        source_part_tokens = source_lower_tokens[i1:i2]
+        target_part_tokens = target_lower_tokens[j1:j2]
+        source_part = " ".join(source_lower_tokens[i1:i2])
+        target_part = " ".join(target_lower_tokens[j1:j2])
         if not source_part and tag != "insert":
             return None, None
 
         if source_part:
-            start_index = source_lower.find(source_part, end_index)
+            start_index = source_lower.find(source_part_tokens[0], end_index)
             if start_index == -1:
                 return None, None
-            end_index = start_index + len(source_part)
+            for token in source_part_tokens:
+                end_index = source_lower.find(token, end_index) + len(token)
         elif tag == "insert":
             start_index = end_index
         else:
@@ -114,6 +109,7 @@ def tags_to_template(tokens, tags, tokenizer):
         fixed_template_tokens.append(token)
         prev_token = token
     template_tokens = fixed_template_tokens[1:-1]
+
     template = tokenizer.decode(
         template_tokens,
         skip_special_tokens=False,
@@ -125,9 +121,11 @@ def tags_to_template(tokens, tags, tokenizer):
     while mask_pos != -1:
         end_mask_pos = mask_pos + len(tokenizer.mask_token)
         template = template[:mask_pos] + MASK_TEMPLATE.format(mask_num) + template[end_mask_pos:]
+        template = " ".join(template.split())
         current_pos = end_mask_pos
         mask_pos = template.find(tokenizer.mask_token, current_pos)
         mask_num += 1
+    template = template.replace(" - ", "-")
     return template
 
 
@@ -164,6 +162,7 @@ def main(
 
         filler_target = [MASK_TEMPLATE.format(i) + infiller for i, infiller in enumerate(infillers)]
         filler_target = "".join(filler_target) + MASK_TEMPLATE.format(len(infillers))
+        filler_target = " ".join(filler_target.split()).strip()
         filtered_records.append({
             "orig_source": source,
             "orig_target": target,

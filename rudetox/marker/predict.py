@@ -7,7 +7,8 @@ from transformers import AutoModelForTokenClassification, AutoModelForMaskedLM, 
 from transformers import AutoTokenizer, pipeline, BasicTokenizer
 from tqdm import tqdm
 
-from rudetox.marker.compute_tags import tags_to_template, MASK_TEMPLATE
+from rudetox.marker.util import MASK_TEMPLATE
+from rudetox.marker.compute_tags import tags_to_template
 from rudetox.util.io import read_jsonl, write_jsonl
 from rudetox.util.dl import pipe_predict
 from rudetox.util.text import preprocess_text
@@ -44,12 +45,15 @@ def main(
 
     gen_model = AutoModelForSeq2SeqLM.from_pretrained(gen_model_name).to(device)
     gen_tokenizer = AutoTokenizer.from_pretrained(gen_model_name)
-    for text_num, (record, predictions, scores) in tqdm(enumerate(zip(records, marker_tags, marker_scores))):
+    for text_num, (record, predictions, scores) in enumerate(zip(records, marker_tags, marker_scores)):
         text = preprocess_text(record[text_field])
+        print()
+        print(text)
         tokens = tokenizer(text).input_ids
         predictions = predictions[:len(tokens)]
         tokens = tokens[:len(predictions)]
         template = tags_to_template(tokens, predictions, tokenizer)
+        print(template)
         if "extra_id" in template:
             input_ids = gen_tokenizer(
                 text,
@@ -65,14 +69,19 @@ def main(
                 num_beams=5,
                 max_length=300
             )
-            fillers = gen_tokenizer.decode(output_ids[0], skip_special_tokens=True)
+            fillers = gen_tokenizer.decode(output_ids[0], skip_special_tokens=False)
+            print(fillers)
             mask_count = template.count("extra_id")
             for mask_num in range(mask_count):
-                current_mask = MASK_TEMPLATE.format(mask_num)
-                next_mask = MASK_TEMPLATE.format(mask_num + 1)
+                current_mask = MASK_TEMPLATE.format(mask_num).strip()
+                next_mask = MASK_TEMPLATE.format(mask_num + 1).strip()
                 start_index = fillers.find(current_mask) + len(current_mask)
                 end_index = fillers.find(next_mask)
-                template = template.replace(current_mask, fillers[start_index:end_index])
+                filler = fillers[start_index:end_index]
+                template = template.replace(current_mask, filler)
+            template = " ".join(template.split())
+            template = template.replace(" ,", ",")
+            print(template)
         record["target"] = template
     write_jsonl(records, output_path)
 

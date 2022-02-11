@@ -328,6 +328,25 @@ stages:
             - data/marker_val.jsonl
             - models/rubertconv_toxic_marker
 
+
+    train_nontoxic_mlm:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train_mlm
+                --config-path configs/rut5_mlm.json
+                --input-path data/nontoxic.jsonl
+                --text-field text
+                --out-dir models/rut5_nontoxic_mlm
+                --override-base-model models/orig_rut5_base
+            - rm -rf models/rut5_nontoxic_mlm/checkpoint*
+        deps:
+            - rudetox/seq2seq/train_mlm.py
+            - configs/rut5_mlm.json
+            - data/nontoxic.jsonl
+            - models/orig_rut5_base
+        outs:
+            - models/rut5_nontoxic_mlm
+
     fill_with_marker:
         cmd:
             - CUDA_VISIBLE_DEVICE=0 python3 -m rudetox.marker.fill

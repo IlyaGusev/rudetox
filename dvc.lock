@@ -253,37 +253,35 @@ stages:
     - mkdir -p models
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train --config-path configs/rut5_detox.json
       --train-path data/seq2seq_train_aug.jsonl --val-path data/seq2seq_val_aug.jsonl
-      --out-dir models/rut5_detox --source-field "source" --target-field "target"
+      --out-dir models/rut5_detox
     - rm -rf models/rut5_detox/checkpoint*
     deps:
     - path: configs/rut5_detox.json
-      md5: 2b63d05ccde7d330ac9505be19da5859
-      size: 357
+      md5: f566e0968c86a7536cca8e104439ba9b
+      size: 362
     - path: data/seq2seq_train_aug.jsonl
-      md5: b4818929fa3027d8433dfa07b251cf67
-      size: 5080676
+      md5: dc48680faeee8c2f34c53d9e9c74bfd5
+      size: 4968794
     - path: data/seq2seq_val_aug.jsonl
-      md5: f4b50e2922b443455d8fe63ab411db4f
-      size: 501878
-    - path: models/rut5_base
+      md5: cdab3ce167df1101d1a6555ce7aca8e8
+      size: 490832
+    - path: models/sber_rut5_base
       md5: 55b9f4dd25232b66679eac6599c954cd.dir
       size: 1785504758
       nfiles: 5
     - path: rudetox/seq2seq/train.py
-      md5: e8d9474ddd2ea539e59399599f64c58e
-      size: 5900
+      md5: bb108fcd0927a2ccc2fb41658d90d680
+      size: 5649
     outs:
     - path: models/rut5_detox
-      md5: b10ebc560595eb0e92b7c85c5caf366d.dir
-      size: 894340433
+      md5: 34f2652dae7a1f91319a459409304028.dir
+      size: 894340443
       nfiles: 6
   download_models:
     cmd:
     - mkdir -p models
-    - rm -rf models/style models/sim models/fluency models/en_ru models/ru_en models/rubertconv
-      models/rut5_base
-    - git clone https://huggingface.co/SkolkovoInstitute/russian_toxicity_classifier
-      models/style
+    - rm -rf models/sim models/fluency models/en_ru models/ru_en models/rubertconv
+      models/sber_rut5_base models/orig_rut5_base
     - git clone https://huggingface.co/cointegrated/LaBSE-en-ru models/sim
     - git clone https://huggingface.co/SkolkovoInstitute/rubert-base-corruption-detector
       models/fluency
@@ -291,7 +289,8 @@ stages:
     - git clone https://huggingface.co/facebook/wmt19-ru-en models/ru_en
     - git clone https://huggingface.co/DeepPavlov/rubert-base-cased-conversational
       models/rubertconv
-    - git clone https://huggingface.co/sberbank-ai/ruT5-base models/rut5_base
+    - git clone https://huggingface.co/sberbank-ai/ruT5-base models/sber_rut5_base
+    - git clone https://huggingface.co/cointegrated/rut5-base models/orig_rut5_base
     outs:
     - path: models/en_ru
       md5: c75ee06cb983aee6746852dedbdf7d78.dir
@@ -301,6 +300,10 @@ stages:
       md5: b87680d0b29abad2d1d6e86b7a069c11.dir
       size: 1429163290
       nfiles: 8
+    - path: models/orig_rut5_base
+      md5: b0a55341e53f2d05f0db2c5360bb7881.dir
+      size: 3910911629
+      nfiles: 8
     - path: models/ru_en
       md5: 91193bd60ed73de12be0842b904a4d76.dir
       size: 2331431203
@@ -309,7 +312,7 @@ stages:
       md5: 614b2bd67865bec9980a51d7a01a898f.dir
       size: 2859314544
       nfiles: 8
-    - path: models/rut5_base
+    - path: models/sber_rut5_base
       md5: 55b9f4dd25232b66679eac6599c954cd.dir
       size: 1785504758
       nfiles: 5
@@ -317,10 +320,6 @@ stages:
       md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
       size: 1032948918
       nfiles: 7
-    - path: models/style
-      md5: a0a33176042b4f48cbd8c04e906819eb.dir
-      size: 2848489352
-      nfiles: 9
   predict_seq2seq:
     cmd:
     - mkdir -p predictions
@@ -329,30 +328,34 @@ stages:
       --num-beams 4 --num-return-sequences 4 --batch-size 4 --ranker-config configs/ranker.json
     deps:
     - path: configs/ranker.json
-      md5: cf587a4609acb5729f392d7e70639806
-      size: 210
+      md5: cddbca13cb991cbeffe9d3a01057dc6e
+      size: 207
     - path: data/seq2seq_test.jsonl
-      md5: 8996c77794e261d46c06f4110148d58b
-      size: 132448
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
     - path: models/fluency
       md5: b87680d0b29abad2d1d6e86b7a069c11.dir
       size: 1429163290
       nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: eb13acc4bdbd0f7ee460cb1b97fcd409.dir
+      size: 715113322
+      nfiles: 6
     - path: models/rut5_detox
-      md5: b10ebc560595eb0e92b7c85c5caf366d.dir
-      size: 894340433
+      md5: 34f2652dae7a1f91319a459409304028.dir
+      size: 894340443
       nfiles: 6
     - path: models/sim
       md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
       size: 1032948918
       nfiles: 7
     - path: rudetox/seq2seq/predict.py
-      md5: 8c5a628032296700ecd8ae78026ae8e7
-      size: 4251
+      md5: e95927b83a8eb990408b8e5b3013938b
+      size: 4469
     outs:
     - path: predictions/rut5_detox_ranker.jsonl
-      md5: 90f2523ef1408173438a49d399cf345e
-      size: 510919
+      md5: 2336a3b4c4979ddf9a6923d62dd6146e
+      size: 491088
   train_clf:
     cmd:
     - mkdir -p models
@@ -447,23 +450,23 @@ stages:
       md5: c98ed8d2e51510719c7adae09a1ce839
       size: 102
     - path: data/clf_all.jsonl
-      md5: 1544f4e7f87164e3af00b8b4e4eb1fdc
-      size: 72412309
+      md5: 9b9b63cbec51f1ebb2301c59d32937bb
+      size: 65202290
     - path: rudetox/sample.py
       md5: ed6a435cfefbce2ecac1599d94cd47d4
       size: 1351
     outs:
     - path: data/neutral.jsonl
-      md5: 4987f3e05610584f9946d05d54c0b85a
-      size: 42736007
+      md5: a7b8f660c99702a8c9bd9a100933331e
+      size: 40590739
   gen_toxic2neutral_backtrans:
     cmd:
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.backtrans data/toxic.jsonl data/backtrans_toxic2neutral.jsonl
       --num-beams 5 --forward-model-name models/ru_en --backward-model-name models/en_ru
     deps:
     - path: data/toxic.jsonl
-      md5: 5bb0818ee5cb8ae3ab57af9e209bcdc3
-      size: 6357161
+      md5: b2b2f755c76fecdd3d29952907a5e663
+      size: 6260409
     - path: models/en_ru
       md5: c75ee06cb983aee6746852dedbdf7d78.dir
       size: 2331339497
@@ -477,8 +480,8 @@ stages:
       size: 4364
     outs:
     - path: data/backtrans_toxic2neutral.jsonl
-      md5: 2bb1f51d31d2e8c5eea9a72ecd360e1f
-      size: 210864508
+      md5: 22362170613ddfca4cdda8575778872f
+      size: 208583715
   rank_toxic2neutral_backtrans:
     cmd:
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker data/backtrans_toxic2neutral.jsonl
@@ -507,21 +510,25 @@ stages:
     - rm -rf models/rut5_tox/checkpoint*
     deps:
     - path: configs/rut5_tox.json
-      md5: 90bd0b4f2759e2e59e167ccd217dbb56
-      size: 363
+      md5: f566e0968c86a7536cca8e104439ba9b
+      size: 362
     - path: data/seq2seq_train.jsonl
-      md5: 144a46ad8ad6f06e755b072ef5ffd087
-      size: 2817146
+      md5: f8b70a6540bf8f9d62ad249aedd7a769
+      size: 2750606
     - path: data/seq2seq_val.jsonl
-      md5: c572fa027d28e3de7cd20de539173727
-      size: 284908
+      md5: 011934462164931fc36367fe09657edb
+      size: 278212
+    - path: models/sber_rut5_base
+      md5: 55b9f4dd25232b66679eac6599c954cd.dir
+      size: 1785504758
+      nfiles: 5
     - path: rudetox/seq2seq/train.py
-      md5: e8d9474ddd2ea539e59399599f64c58e
-      size: 5900
+      md5: bb108fcd0927a2ccc2fb41658d90d680
+      size: 5649
     outs:
     - path: models/rut5_tox
-      md5: 89f62d6925b821716df010f89c5dbbac.dir
-      size: 979502739
+      md5: bfa93efa10041a47aef073fb6a1cb3d0.dir
+      size: 894340443
       nfiles: 6
   train_marker:
     cmd:
@@ -531,38 +538,39 @@ stages:
       --model-name models/rubertconv
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.train --train-path data/marker_train.jsonl
       --val-path data/marker_val.jsonl --out-dir models/rubertconv_toxic_marker --config-path
-      configs/rubertconv_toxic_marker.json
+      configs/rubertconv_toxic_marker.json --text-field orig_source --labels-field
+      labels
     - rm -rf models/rubertconv_toxic_marker/checkpoint*
     deps:
     - path: configs/rubertconv_toxic_marker.json
-      md5: e518ac6cd3b0c770b5a9f2ff075ce377
-      size: 458
+      md5: 8ed2813853547072196666f39826a5f8
+      size: 547
     - path: data/seq2seq_train.jsonl
-      md5: 144a46ad8ad6f06e755b072ef5ffd087
-      size: 2817146
+      md5: f8b70a6540bf8f9d62ad249aedd7a769
+      size: 2750606
     - path: data/seq2seq_val.jsonl
-      md5: c572fa027d28e3de7cd20de539173727
-      size: 284908
+      md5: 011934462164931fc36367fe09657edb
+      size: 278212
     - path: models/rubertconv
       md5: 614b2bd67865bec9980a51d7a01a898f.dir
       size: 2859314544
       nfiles: 8
     - path: rudetox/marker/compute_tags.py
-      md5: 5aa22c6cd80242bf915ee8602e51f373
-      size: 2989
+      md5: 0a211e9773d8bb10d618a2215613c7ce
+      size: 7501
     - path: rudetox/marker/train.py
-      md5: d2f960e3f373a141a6e01a7c687e5621
-      size: 4813
+      md5: 4ee63effc9f7ebe863e64a94fd2aafb0
+      size: 5205
     outs:
     - path: data/marker_train.jsonl
-      md5: 79981825437e685466b94e8c9309e421
-      size: 3162261
+      md5: fb604c8b84629aaa501ed746696dad14
+      size: 9103024
     - path: data/marker_val.jsonl
-      md5: 1dc09d0e111fb6e4f2335e9aef87e4fa
-      size: 326957
+      md5: f5c7fd33bd506584554c8fe4066ceafb
+      size: 899860
     - path: models/rubertconv_toxic_marker
-      md5: fece67e29cb95f7f7b4948cd694a2f00.dir
-      size: 712750389
+      md5: ea317366e741b01ad6c8106673a1c24c.dir
+      size: 712756605
       nfiles: 6
   predict_reverse_seq2seq:
     cmd:
@@ -573,19 +581,19 @@ stages:
       2
     deps:
     - path: data/neutral.jsonl
-      md5: 4987f3e05610584f9946d05d54c0b85a
-      size: 42736007
+      md5: a7b8f660c99702a8c9bd9a100933331e
+      size: 40590739
     - path: models/rut5_tox
-      md5: 89f62d6925b821716df010f89c5dbbac.dir
-      size: 979502739
+      md5: bfa93efa10041a47aef073fb6a1cb3d0.dir
+      size: 894340443
       nfiles: 6
     - path: rudetox/seq2seq/predict.py
-      md5: 37fdefec1d4231b58bc2ad0dfbd836f6
-      size: 4098
+      md5: e95927b83a8eb990408b8e5b3013938b
+      size: 4469
     outs:
     - path: data/reverse_neutral2toxic.jsonl
-      md5: afc44012dce3c22ee2217e52cc578339
-      size: 47846206
+      md5: a0eaaa8b0ca36397608ca58350563816
+      size: 45121264
   rank_neutral2toxic_reverse_seq2seq:
     cmd:
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker data/reverse_neutral2toxic.jsonl
@@ -596,15 +604,15 @@ stages:
       md5: e2df0f1ce93954985273b51ca793af9a
       size: 218
     - path: data/reverse_neutral2toxic.jsonl
-      md5: afc44012dce3c22ee2217e52cc578339
-      size: 47846206
+      md5: a0eaaa8b0ca36397608ca58350563816
+      size: 45121264
     - path: rudetox/ranker.py
       md5: 7483b81c51456e720ae24227ffb1490a
       size: 5862
     outs:
     - path: data/reverse_neutral2toxic_ranked.jsonl
-      md5: 37ddbe269a3e769724631b36042c817c
-      size: 5341755
+      md5: 6a2a0db73c76ecbac15b9c1cc9707eca
+      size: 4976623
   finalize_neutral2toxic_reverse_seq2seq:
     cmd:
     - python3 -m rudetox.filter data/reverse_neutral2toxic_ranked.jsonl data/reverse_neutral2toxic_final.jsonl
@@ -615,15 +623,15 @@ stages:
       md5: 0ed462d16787b5c493b03639e9b11582
       size: 90
     - path: data/reverse_neutral2toxic_ranked.jsonl
-      md5: 37ddbe269a3e769724631b36042c817c
-      size: 5341755
+      md5: 6a2a0db73c76ecbac15b9c1cc9707eca
+      size: 4976623
     - path: rudetox/filter.py
-      md5: 99b5ce9bd58a7975b810ad4b213d95e9
-      size: 1780
+      md5: 20b2422125a1b1ccb6a04c0d266a8de2
+      size: 1824
     outs:
     - path: data/reverse_neutral2toxic_final.jsonl
-      md5: 6adf91b565e7505d6096f92810a8f671
-      size: 3097042
+      md5: 1ff483e646a81f42a2d923cd28563929
+      size: 2766309
   finalize_toxic2neutral_backtrans:
     cmd:
     - python3 -m rudetox.filter data/backtrans_toxic2neutral_ranked.jsonl data/backtrans_toxic2neutral_final.jsonl

@@ -17,5 +17,9 @@
     "label2id": {
         "neutral": 0,
         "toxic": 1
+    },
+    "model_params": {
+        "hidden_dropout_prob": 0.1,
+        "attention_probs_dropout_prob": 0.1
     }
 }

@@ -3,8 +3,8 @@ set -e
 
 INPUT_PATH=$1;
 
-python3 -m rudetox.to_jsonl $INPUT_PATH data/detox_test.tsv $INPUT_PATH.style style;
-python3 -m rudetox.to_jsonl $INPUT_PATH data/detox_test.tsv $INPUT_PATH.sim sim;
+python3 -m rudetox.to_toloka $INPUT_PATH data/detox_test.tsv $INPUT_PATH.style style;
+python3 -m rudetox.to_toloka $INPUT_PATH data/detox_test.tsv $INPUT_PATH.sim sim;
 
 python3 -m rudetox.crowd.upload \
     --input-path $INPUT_PATH.style \

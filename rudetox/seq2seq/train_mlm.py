@@ -5,9 +5,10 @@ import json
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, Trainer, TrainingArguments, logging
-from transformers import EncoderDecoderModel, AutoModelForSeq2SeqLM
+from transformers import AutoModelForSeq2SeqLM
 
-from rudetox.seq2seq.dataset import Seq2seqDataset
+from rudetox.seq2seq.dataset import TextDataset
+from rudetox.seq2seq.collator import T5MLMDataCollator
 from rudetox.util.io import read_jsonl
 from rudetox.util.dl import set_random_seed, fix_tokenizer
 
@@ -15,66 +16,51 @@ from rudetox.util.dl import set_random_seed, fix_tokenizer
 def train(
     config_path,
     checkpoint,
-    train_path,
-    val_path,
-    train_sample_rate,
-    val_sample_rate,
+    input_path,
+    sample_rate,
     out_dir,
     report_to,
     seed,
-    source_field,
-    target_field,
-    style_field
+    text_field,
+    override_base_model,
+    val_part
 ):
     set_random_seed(seed)
     logging.set_verbosity_info()
     with open(config_path, "r") as r:
         config = json.load(r)
 
-    model_type = config["model_type"]
-    assert model_type in ("encoder_decoder", "seq2seq_lm")
     model_name = config["model_name"]
+    if override_base_model:
+        model_name = override_base_model
     tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
     tokenizer = fix_tokenizer(tokenizer)
 
-    # Data preparation
-    train_records = list(read_jsonl(train_path))
-    val_records = list(read_jsonl(val_path))
-    random.shuffle(train_records)
+    # Data loading
+    records = list(read_jsonl(input_path, sample_rate))
+    random.shuffle(records)
 
-    dataset_class = Seq2seqDataset
+    border = int(len(records) * (1.0 - val_part))
+    train_records = records[:border]
+    val_records = records[border:]
+
+    # Data preparation
     max_source_tokens_count = config["max_source_tokens_count"]
-    max_target_tokens_count = config["max_target_tokens_count"]
-    train_dataset_args = {
-        "original_records": train_records,
-        "sample_rate": train_sample_rate,
-        "tokenizer": tokenizer,
-        "max_source_tokens_count": max_source_tokens_count,
-        "max_target_tokens_count": max_target_tokens_count,
-        "source_field": source_field,
-        "target_field": target_field,
-        "style_field": style_field
-    }
-    val_dataset_args = {
-        "original_records": val_records,
-        "sample_rate": val_sample_rate,
-        "tokenizer": tokenizer,
-        "max_source_tokens_count": max_source_tokens_count,
-        "max_target_tokens_count": max_target_tokens_count,
-        "source_field": source_field,
-        "target_field": target_field,
-        "style_field": style_field
-    }
-    train_dataset = dataset_class(**train_dataset_args)
-    val_dataset = dataset_class(**val_dataset_args)
+    train_dataset = TextDataset(
+        train_records,
+        tokenizer=tokenizer,
+        max_source_tokens_count=max_source_tokens_count,
+        text_field=text_field
+    )
+    val_dataset = TextDataset(
+        val_records,
+        tokenizer=tokenizer,
+        max_source_tokens_count=max_source_tokens_count,
+        text_field=text_field
+    )
 
     # Model loading
-    if model_type == "encoder_decoder":
-        model = EncoderDecoderModel.from_encoder_decoder_pretrained(model_name, model_name)
-    elif model_type == "seq2seq_lm":
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-    else:
-        assert False
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
     # Special tokens
     model.config.pad_token_id = tokenizer.pad_token_id
@@ -102,11 +88,20 @@ def train(
 
     # Default model generation params
     model.config.num_beams = 5
-    model.config.max_length = max_target_tokens_count
-    if model_type == "causal_lm":
-        model.config.max_length = max_target_tokens_count + max_source_tokens_count
+    model.config.max_length = max_source_tokens_count
 
     # Training
+    noise_density = config["noise_density"]
+    mean_noise_span_length = config["mean_noise_span_length"]
+    data_collator = T5MLMDataCollator(
+        tokenizer=tokenizer,
+        model=model,
+        input_length=max_source_tokens_count,
+        noise_density=noise_density,
+        mean_noise_span_length=mean_noise_span_length,
+        pad_token_id=model.config.pad_token_id
+    )
+
     batch_size = config["batch_size"]
     gradient_accumulation_steps = config["gradient_accumulation_steps"]
     logging_steps = config["logging_steps"]
@@ -137,7 +132,8 @@ def train(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
-        eval_dataset=val_dataset
+        eval_dataset=val_dataset,
+        data_collator=data_collator
     )
     trainer.train(checkpoint)
     model.save_pretrained(out_dir)
@@ -146,17 +142,15 @@ def train(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--override-base-model", type=str, default=None)
     parser.add_argument("--config-path", type=str, required=True)
-    parser.add_argument("--train-path", type=str, required=True)
-    parser.add_argument("--val-path", type=str, required=True)
+    parser.add_argument("--input-path", type=str, required=True)
     parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--out-dir", type=str, required=True)
-    parser.add_argument("--train-sample-rate", type=float, default=1.0)
-    parser.add_argument("--val-sample-rate", type=float, default=1.0)
+    parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--val-part", type=float, default=0.1)
     parser.add_argument("--report-to", type=str, default="none")
-    parser.add_argument("--source-field", type=str, default="source")
-    parser.add_argument("--target-field", type=str, default="target")
-    parser.add_argument("--style-field", type=str, default=None)
+    parser.add_argument("--text-field", type=str, required=True)
     args = parser.parse_args()
     train(**vars(args))
