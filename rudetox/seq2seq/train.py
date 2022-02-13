@@ -24,7 +24,8 @@ def train(
     seed,
     source_field,
     target_field,
-    style_field
+    style_field,
+    override_base_model
 ):
     set_random_seed(seed)
     logging.set_verbosity_info()
@@ -34,6 +35,8 @@ def train(
     model_type = config["model_type"]
     assert model_type in ("encoder_decoder", "seq2seq_lm")
     model_name = config["model_name"]
+    if override_base_model:
+        model_name = override_base_model
     tokenizer = AutoTokenizer.from_pretrained(model_name, do_lower_case=False, strip_accents=False)
     tokenizer = fix_tokenizer(tokenizer)
 
@@ -158,5 +161,6 @@ if __name__ == "__main__":
     parser.add_argument("--source-field", type=str, default="source")
     parser.add_argument("--target-field", type=str, default="target")
     parser.add_argument("--style-field", type=str, default=None)
+    parser.add_argument("--override-base-model", type=str, default=None)
     args = parser.parse_args()
     train(**vars(args))

@@ -1,7 +1,7 @@
 {
     "batch_size": 8,
     "learning_rate": 0.0004,
-    "num_train_epochs": 7,
+    "num_train_epochs": 4,
     "gradient_accumulation_steps": 16,
     "max_target_tokens_count": 100,
     "max_source_tokens_count": 100,
@@ -10,5 +10,5 @@
     "eval_steps": 100,
     "warmup_steps": 100,
     "model_type": "seq2seq_lm",
-    "model_name": "models/rut5_base"
+    "model_name": "models/sber_rut5_base"
 }

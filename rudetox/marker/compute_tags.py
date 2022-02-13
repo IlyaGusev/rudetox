@@ -1,11 +1,13 @@
 import argparse
+import string
+from collections import defaultdict
 from difflib import SequenceMatcher
 
 from transformers import AutoTokenizer, BasicTokenizer
 
 from rudetox.util.io import read_jsonl, write_jsonl
 from rudetox.util.text import preprocess_text
-from rudetox.marker.util import MASK_TEMPLATE
+from rudetox.marker.util import MASK_TEMPLATE, token_labels_to_template
 
 TAGS_TO_LABELS = {
     "equal": 0,
@@ -15,11 +17,16 @@ TAGS_TO_LABELS = {
 }
 
 
-def compute_tags(
+def is_punct(text):
+    return all(ch in string.punctuation for ch in text)
+
+
+def compute_labels(
     source,
     target,
     fast_tokenizer,
-    tokenizer
+    tokenizer,
+    discard_insert
 ):
     source_lower, target_lower = source.lower(), target.lower()
     source_encoded, target_encoded = fast_tokenizer.encode_plus(source), fast_tokenizer.encode_plus(target)
@@ -75,64 +82,21 @@ def compute_tags(
                 tags[idx] = tag
                 continue
             prev_insert = False
-            if tag == "equal":
+            if tag == "equal" and not discard_insert:
                 tags[idx] = "insert"
             elif tag == "delete":
                 tags[idx] = "replace"
-    if indices[-1][2] == "insert":
+    if indices[-1][2] == "insert" and not discard_insert:
         tags[-1] = "insert"
-    tags = [TAGS_TO_LABELS[t] for t in tags]
-    return tags, infillers
-
-
-def tags_to_template(tokens, tags, tokenizer):
-    assert len(tokens) == len(tags)
-    template_tokens = []
-    for i, (token, tag) in enumerate(zip(tokens, tags)):
-        if tag == 0:
-            template_tokens.append(token)
-            continue
-        elif tag == 1:
-            continue
-        elif tag == 2:
-            template_tokens.append(tokenizer.mask_token_id)
-            continue
-        elif tag == 3:
-            template_tokens.append(tokenizer.mask_token_id)
-            template_tokens.append(token)
-            continue
-    prev_token = None
-    fixed_template_tokens = []
-    for token in template_tokens:
-        if prev_token and prev_token == tokenizer.mask_token_id and token == tokenizer.mask_token_id:
-            continue
-        fixed_template_tokens.append(token)
-        prev_token = token
-    template_tokens = fixed_template_tokens[1:-1]
-
-    template = tokenizer.decode(
-        template_tokens,
-        skip_special_tokens=False,
-        clean_up_tokenization_spaces=True
-    )
-    current_pos = 0
-    mask_pos = template.find(tokenizer.mask_token, current_pos)
-    mask_num = 0
-    while mask_pos != -1:
-        end_mask_pos = mask_pos + len(tokenizer.mask_token)
-        template = template[:mask_pos] + MASK_TEMPLATE.format(mask_num) + template[end_mask_pos:]
-        template = " ".join(template.split())
-        current_pos = end_mask_pos
-        mask_pos = template.find(tokenizer.mask_token, current_pos)
-        mask_num += 1
-    template = template.replace(" - ", "-")
-    return template
+    labels = [TAGS_TO_LABELS[t] for t in tags]
+    return labels, infillers
 
 
 def main(
     input_path,
     output_path,
-    model_name
+    model_name,
+    discard_insert
 ):
     records = list(read_jsonl(input_path))
     tokenizer = AutoTokenizer.from_pretrained(
@@ -155,8 +119,8 @@ def main(
         source, target = preprocess_text(source), preprocess_text(target)
         source_encoded, target_encoded = fast_tokenizer.encode_plus(source), fast_tokenizer.encode_plus(target)
 
-        tags, infillers = compute_tags(source, target, fast_tokenizer, tokenizer)
-        if tags is None:
+        labels, infillers = compute_labels(source, target, fast_tokenizer, tokenizer, discard_insert)
+        if labels is None:
             bad_records_count += 1
             continue
 
@@ -167,14 +131,14 @@ def main(
             "orig_source": source,
             "orig_target": target,
             "tokens": source_encoded.input_ids,
-            "labels": tags,
+            "labels": labels,
             "target": filler_target
         })
     print("Bad records:", bad_records_count)
 
     final_records = []
     for r in filtered_records:
-        template = tags_to_template(r["tokens"], r["labels"], tokenizer)
+        template = token_labels_to_template(r["tokens"], r["labels"], tokenizer)
         target_mask_count = r["target"].count("extra_id") - 1
         template_mask_count = template.count("extra_id")
         if target_mask_count != template_mask_count:
@@ -190,5 +154,6 @@ if __name__ == "__main__":
     parser.add_argument("input_path", type=str)
     parser.add_argument("output_path", type=str)
     parser.add_argument("--model-name", type=str, required=True)
+    parser.add_argument("--discard-insert", action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))

@@ -136,13 +136,16 @@ def main(
     out_dir,
     sample_rate,
     text_field,
-    res_field
+    res_field,
+    override_base_model
 ):
     train_records = list(read_jsonl(train_path, sample_rate))
     val_records = list(read_jsonl(val_path, sample_rate))
     test_records = list(read_jsonl(test_path, sample_rate))
     with open(config_path, "r") as r:
         config = json.load(r)
+    if override_base_model:
+        config["model_name"] = override_base_model
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model, tokenizer = train(
@@ -177,5 +180,6 @@ if __name__ == "__main__":
     parser.add_argument("--res-field", type=str, default="label")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--sample-rate", type=float, default=1.0)
+    parser.add_argument("--override-base-model", type=str, default=None)
     args = parser.parse_args()
     main(**vars(args))

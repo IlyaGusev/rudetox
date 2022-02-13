@@ -1,0 +1,14 @@
+{
+    "batch_size": 8,
+    "learning_rate": 0.0004,
+    "num_train_epochs": 5,
+    "gradient_accumulation_steps": 16,
+    "max_source_tokens_count": 100,
+    "logging_steps": 25,
+    "save_steps": 300,
+    "eval_steps": 300,
+    "warmup_steps": 300,
+    "model_name": "models/sber_rut5_base",
+    "noise_density": 0.25,
+    "mean_noise_span_length": 3
+}

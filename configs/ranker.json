@@ -3,5 +3,6 @@
     "meaning_model_name": "models/sim",
     "fluency_model_name": "models/fluency",
     "use_clf_filter": true,
-    "weights": [1.0, 0.2, 1.0, 0.0]
+    "weights": [1.0, 0.2, 1.0, 0.0],
+    "max_style_score": 0.5
 }

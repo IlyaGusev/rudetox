@@ -20,6 +20,8 @@ def is_good_record(r, config):
         return False, "sim"
     if scores["chrf"] < config.get("min_chrf", 0.0):
         return False, "chrf"
+    if len(source) < config.get("min_length", 0):
+        return False, "length"
     return True, "ok"
 
 

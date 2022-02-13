@@ -12,6 +12,7 @@ from sklearn.metrics import classification_report
 
 from rudetox.util.io import read_jsonl
 from rudetox.util.dl import gen_batch
+from rudetox.marker.util import choose_best_records
 
 
 class LabeledTokensDataset(Dataset):
@@ -55,15 +56,20 @@ def main(
     out_dir,
     sample_rate,
     text_field,
-    labels_field
+    labels_field,
+    choose_best
 ):
+    random.seed(seed)
     train_records = list(read_jsonl(train_path, sample_rate))
     val_records = list(read_jsonl(val_path, sample_rate))
+
+    if choose_best:
+        train_records = choose_best_records(train_records)
+        val_records = choose_best_records(val_records)
 
     with open(config_path, "r") as r:
         config = json.load(r)
 
-    random.seed(seed)
     random.shuffle(train_records)
     print("Train records: ", len(train_records))
     print("Val records: ", len(val_records))
@@ -142,5 +148,6 @@ if __name__ == "__main__":
     parser.add_argument("--sample-rate", type=float, default=1.0)
     parser.add_argument("--text-field", type=str, required=True)
     parser.add_argument("--labels-field", type=str, required=True)
+    parser.add_argument("--choose-best", action="store_true", default=False)
     args = parser.parse_args()
     main(**vars(args))

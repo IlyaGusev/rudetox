@@ -34,7 +34,7 @@ def predict(
     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
     model = model.to(device)
 
-    outputs = []
+    outputs, output_records = [], []
     records = list(read_jsonl(input_path, sample_rate))
     for batch in tqdm(gen_batch(records, batch_size)):
         texts = [r[text_field] for r in batch]
@@ -59,7 +59,7 @@ def predict(
         )
         output_ids = output_ids.reshape((len(batch), num_return_sequences, output_ids.size(1)))
 
-        for sample_input_ids, sample_output_ids in zip(input_ids, output_ids):
+        for record, sample_input_ids, sample_output_ids in zip(batch, input_ids, output_ids):
             sample_input_ids = sample_input_ids.tolist()
             if model.config.eos_token_id not in sample_input_ids:
                 continue
@@ -94,14 +94,10 @@ def predict(
                 print(new_text)
                 if "extra_id" in new_text:
                     continue
-                assert "extra_id" not in new_text
-                outputs.append(new_text)
-    output_records = []
-    for i, output in enumerate(outputs):
-        record_index = i // num_return_sequences
-        new_record = copy.copy(records[record_index])
-        new_record[output_field] = output
-        output_records.append(new_record)
+                new_record = copy.copy(record)
+                new_record[output_field] = new_text
+                print(new_record)
+                output_records.append(new_record)
     write_jsonl(output_records, output_path)
 
 

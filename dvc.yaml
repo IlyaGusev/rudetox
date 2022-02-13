@@ -126,6 +126,7 @@ stages:
                 --val-path data/clf_val_aug.jsonl
                 --test-path data/clf_test.jsonl
                 --out-dir models/rubertconv_toxic_clf
+                --override-base-model models/rubertconv
             - rm -rf models/rubertconv_toxic_clf/checkpoint*
         deps:
             - rudetox/clf/train.py
@@ -133,26 +134,9 @@ stages:
             - data/clf_train_aug.jsonl
             - data/clf_val_aug.jsonl
             - data/clf_test.jsonl
+            - models/rubertconv
         outs:
             - models/rubertconv_toxic_clf
-
-    train_seq2seq:
-        cmd:
-            - mkdir -p models
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
-                --config-path configs/rut5_detox.json
-                --train-path data/seq2seq_train.jsonl
-                --val-path data/seq2seq_val.jsonl
-                --out-dir models/rut5_detox
-            - rm -rf models/rut5_detox/checkpoint*
-        deps:
-            - rudetox/seq2seq/train.py
-            - configs/rut5_detox.json
-            - models/sber_rut5_base
-            - data/seq2seq_train.jsonl
-            - data/seq2seq_val.jsonl
-        outs:
-            - models/rut5_detox
 
     check_clf:
         cmd:
@@ -171,27 +155,85 @@ stages:
         outs:
             - reports/clf_suite.pkl
 
-    predict_seq2seq:
+    train_seq2seq_sber:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/sber_rut5_detox.json
+                --train-path data/seq2seq_train_aug.jsonl
+                --val-path data/seq2seq_val_aug.jsonl
+                --out-dir models/sber_rut5_detox
+                --override-base-model models/sber_rut5_base
+            - rm -rf models/sber_rut5_detox/checkpoint*
+        deps:
+            - rudetox/seq2seq/train.py
+            - configs/sber_rut5_detox.json
+            - models/sber_rut5_base
+            - data/seq2seq_train.jsonl
+            - data/seq2seq_val.jsonl
+        outs:
+            - models/sber_rut5_detox
+
+    predict_seq2seq_sber:
         cmd:
             - mkdir -p predictions
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
                 --input-file data/seq2seq_test.jsonl
-                --output-file predictions/rut5_detox_ranker.jsonl
-                --model-name models/rut5_detox
-                --num-beams 4
-                --num-return-sequences 4
-                --batch-size 4
-                --ranker-config configs/ranker.json
+                --output-file predictions/seq2seq_sber_beam5.jsonl
+                --model-name models/sber_rut5_detox
+                --num-beams 5
+                --num-return-sequences 5
+                --batch-size 2
         deps:
             - rudetox/seq2seq/predict.py
-            - models/rut5_detox
+            - models/sber_rut5_detox
             - models/rubertconv_toxic_clf
             - models/fluency
             - models/sim
             - configs/ranker.json
             - data/seq2seq_test.jsonl
         outs:
-            - predictions/rut5_detox_ranker.jsonl
+            - predictions/seq2seq_sber_beam5.jsonl
+
+    train_seq2seq_orig:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/orig_rut5_detox.json
+                --train-path data/seq2seq_train_aug.jsonl
+                --val-path data/seq2seq_val_aug.jsonl
+                --out-dir models/orig_rut5_detox
+                --override-base-model models/orig_rut5_base
+            - rm -rf models/orig_rut5_detox/checkpoint*
+        deps:
+            - rudetox/seq2seq/train.py
+            - configs/orig_rut5_detox.json
+            - models/orig_rut5_base
+            - data/seq2seq_train.jsonl
+            - data/seq2seq_val.jsonl
+        outs:
+            - models/orig_rut5_detox
+
+    predict_seq2seq_orig:
+        cmd:
+            - mkdir -p predictions
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
+                --input-file data/seq2seq_test.jsonl
+                --output-file predictions/seq2seq_orig_beam5.jsonl
+                --model-name models/orig_rut5_detox
+                --num-beams 5
+                --num-return-sequences 5
+                --batch-size 2
+        deps:
+            - rudetox/seq2seq/predict.py
+            - models/orig_rut5_detox
+            - models/rubertconv_toxic_clf
+            - models/fluency
+            - models/sim
+            - configs/ranker.json
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/seq2seq_orig_beam5.jsonl
 
     sample_toxic:
         cmd:
@@ -217,88 +259,23 @@ stages:
         outs:
             - data/neutral.jsonl
 
-    gen_toxic2neutral_backtrans:
-        cmd:
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.backtrans
-                data/toxic.jsonl data/backtrans_toxic2neutral.jsonl
-                --num-beams 5
-                --forward-model-name models/ru_en
-                --backward-model-name models/en_ru
-        deps:
-            - rudetox/backtrans.py
-            - data/toxic.jsonl
-            - models/ru_en
-            - models/en_ru
-        outs:
-            - data/backtrans_toxic2neutral.jsonl
-
-    train_reverse_seq2seq:
+    train_nontoxic_mlm_sber:
         cmd:
             - mkdir -p models
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
-                --config-path configs/rut5_tox.json
-                --train-path data/seq2seq_train.jsonl
-                --val-path data/seq2seq_val.jsonl
-                --out-dir models/rut5_tox
-                --source-field "target"
-                --target-field "source"
-            - rm -rf models/rut5_tox/checkpoint*
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train_mlm
+                --config-path configs/sber_rut5_nontoxic_mlm.json
+                --input-path data/nontoxic.jsonl
+                --text-field text
+                --out-dir models/sber_rut5_nontoxic_mlm
+                --override-base-model models/sber_rut5_base
+            - rm -rf models/sber_rut5_nontoxic_mlm/checkpoint*
         deps:
-            - rudetox/seq2seq/train.py
-            - configs/rut5_tox.json
+            - rudetox/seq2seq/train_mlm.py
+            - configs/sber_rut5_nontoxic_mlm.json
+            - data/nontoxic.jsonl
             - models/sber_rut5_base
-            - data/seq2seq_train.jsonl
-            - data/seq2seq_val.jsonl
         outs:
-            - models/rut5_tox
-
-    predict_reverse_seq2seq:
-        cmd:
-            - mkdir -p predictions
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
-                --input-file data/neutral.jsonl
-                --source-field text
-                --sample-rate 0.03
-                --output-file data/reverse_neutral2toxic.jsonl
-                --model-name models/rut5_tox
-                --num-beams 20
-                --num-return-sequences 20
-                --batch-size 2
-        deps:
-            - models/rut5_tox
-            - rudetox/seq2seq/predict.py
-            - data/neutral.jsonl
-        outs:
-            - data/reverse_neutral2toxic.jsonl
-
-    rank_neutral2toxic_reverse_seq2seq:
-        cmd:
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
-                data/reverse_neutral2toxic.jsonl data/reverse_neutral2toxic_ranked.jsonl
-                --config-path configs/inverse_ranker.json
-                --source-field text
-                --target-field target
-        deps:
-            - rudetox/ranker.py
-            - data/reverse_neutral2toxic.jsonl
-            - configs/inverse_ranker.json
-        outs:
-            - data/reverse_neutral2toxic_ranked.jsonl
-
-    finalize_neutral2toxic_reverse_seq2seq:
-        cmd:
-            - python3 -m rudetox.filter
-                data/reverse_neutral2toxic_ranked.jsonl
-                data/reverse_neutral2toxic_final.jsonl
-                --config-path configs/inverse_filter.json
-                --source-field target
-                --target-field source
-        deps:
-            - rudetox/filter.py
-            - configs/inverse_filter.json
-            - data/reverse_neutral2toxic_ranked.jsonl
-        outs:
-            - data/reverse_neutral2toxic_final.jsonl
+            - models/sber_rut5_nontoxic_mlm
 
     train_marker:
         cmd:
@@ -308,6 +285,7 @@ stages:
             - python3 -m rudetox.marker.compute_tags
                 data/seq2seq_val.jsonl data/marker_val.jsonl
                 --model-name models/rubertconv
+            - mkdir -p models
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.train
                 --train-path data/marker_train.jsonl
                 --val-path data/marker_val.jsonl
@@ -315,6 +293,7 @@ stages:
                 --config-path configs/rubertconv_toxic_marker.json
                 --text-field orig_source
                 --labels-field labels
+                --choose-best
             - rm -rf models/rubertconv_toxic_marker/checkpoint*
         deps:
             - rudetox/marker/compute_tags.py
@@ -328,72 +307,20 @@ stages:
             - data/marker_val.jsonl
             - models/rubertconv_toxic_marker
 
-
-    train_nontoxic_mlm:
+    train_filler_orig:
         cmd:
             - mkdir -p models
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train_mlm
-                --config-path configs/rut5_mlm.json
-                --input-path data/nontoxic.jsonl
-                --text-field text
-                --out-dir models/rut5_nontoxic_mlm
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/orig_rut5_filler.json
+                --train-path data/marker_train.jsonl
+                --val-path data/marker_val.jsonl
                 --override-base-model models/orig_rut5_base
-            - rm -rf models/rut5_nontoxic_mlm/checkpoint*
+                --out-dir models/orig_rut5_filler
+            - rm -rf models/orig_rut5_filler/checkpoint*
         deps:
-            - rudetox/seq2seq/train_mlm.py
-            - configs/rut5_mlm.json
-            - data/nontoxic.jsonl
+            - rudetox/seq2seq/train.py
+            - data/marker_train.jsonl
+            - data/marker_val.jsonl
             - models/orig_rut5_base
         outs:
-            - models/rut5_nontoxic_mlm
-
-    fill_with_marker:
-        cmd:
-            - CUDA_VISIBLE_DEVICE=0 python3 -m rudetox.marker.fill
-                --model-name models/rubertconv_toxic_marker
-                --input-path data/toxic.jsonl
-                --output-path data/marker_toxic2neutral.jsonl
-                --filler-model-name models/orig_rut5_base
-                --text-field "text"
-        deps:
-            - rudetox/marker/fill.py
-            - data/toxic.jsonl
-            - models/rubertconv_toxic_marker
-            - models/rubertconv
-        outs:
-            - data/marker_toxic2neutral.jsonl
-
-    rank_toxic2neutral:
-        cmd:
-            - cat data/backtrans_toxic2neutral.jsonl > data/toxic2neutral.jsonl
-            - cat data/marker_toxic2neutral.jsonl >> data/toxic2neutral.jsonl
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
-                data/toxic2neutral.jsonl
-                data/toxic2neutral_ranked.jsonl
-                --config-path configs/ranker.json
-                --source-field source
-                --target-field target
-        deps:
-            - rudetox/ranker.py
-            - configs/ranker.json
-            - data/backtrans_toxic2neutral.jsonl
-            - data/marker_toxic2neutral.jsonl
-        outs:
-            - data/toxic2neutral_ranked.jsonl
-
-    finalize_toxic2neutral:
-        cmd:
-            - python3 -m rudetox.filter
-                data/toxic2neutral_ranked.jsonl
-                data/toxic2neutral_final.jsonl
-                --config-path configs/filter.json
-                --source-field source
-                --target-field target
-        deps:
-            - rudetox/filter.py
-            - configs/filter.json
-            - data/toxic2neutral_ranked.jsonl
-        outs:
-            - data/toxic2neutral_final.jsonl
-
-
+            - models/orig_rut5_filler

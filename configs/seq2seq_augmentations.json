@@ -1,0 +1,23 @@
+{
+    "augmentations": [
+        {
+            "name": "fix_case"
+        },
+        {
+            "name": "add_toxic_words",
+            "rate": 0.15
+        },
+        {
+            "name": "add_typos",
+            "rate": 0.15
+        },
+        {
+            "name": "toxic_words_mask_char",
+            "rate": 0.3
+        },
+        {
+            "name": "toxic_words_add_typos",
+            "rate": 0.3
+        }
+    ]
+}

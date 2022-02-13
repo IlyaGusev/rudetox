@@ -22,6 +22,7 @@ class Ranker:
         fluency_model_name,
         use_clf_filter,
         weights,
+        max_style_score,
         device=DEVICE,
         invert_style=False
     ):
@@ -33,6 +34,7 @@ class Ranker:
 
         self.invert_style = invert_style
         self.use_clf_filter = use_clf_filter
+        self.max_style_score = max_style_score
         self.weights = weights
 
     def eval_style(self, texts):
@@ -65,8 +67,8 @@ class Ranker:
 
         if self.use_clf_filter:
             good_style_label = 1 if self.invert_style else 0
-            style_labels, _ = self.eval_style(targets)
-            good_style_targets = [tgt for lbl, tgt in zip(style_labels, targets) if lbl == good_style_label]
+            style_labels, style_scores = self.eval_style(targets)
+            good_style_targets = [tgt for score, tgt in zip(style_scores, targets) if score < self.max_style_score]
             has_good_style = len(good_style_targets) != 0
             if not has_good_style:
                 good_style_targets = targets
