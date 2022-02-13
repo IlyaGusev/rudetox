@@ -174,7 +174,7 @@ stages:
         outs:
             - models/sber_rut5_detox
 
-    predict_seq2seq_sber:
+    predict_seq2seq_sber_beam:
         cmd:
             - mkdir -p predictions
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
@@ -187,13 +187,64 @@ stages:
         deps:
             - rudetox/seq2seq/predict.py
             - models/sber_rut5_detox
-            - models/rubertconv_toxic_clf
-            - models/fluency
-            - models/sim
-            - configs/ranker.json
             - data/seq2seq_test.jsonl
         outs:
             - predictions/seq2seq_sber_beam5.jsonl
+
+    rank_seq2seq_sber_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
+                predictions/seq2seq_sber_beam5.jsonl
+                predictions/seq2seq_sber_beam5_ranker.jsonl
+                --config-path configs/ranker.json
+        deps:
+            - rudetox/ranker.py
+            - configs/ranker.json
+            - models/rubertconv_toxic_clf
+            - models/fluency
+            - models/sim
+            - predictions/seq2seq_sber_beam5.jsonl
+        outs:
+            - predictions/seq2seq_sber_beam5_ranker.jsonl
+
+    to_plain_seq2seq_sber_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/seq2seq_sber_beam5_ranker.jsonl
+                predictions/seq2seq_sber_beam5_ranker.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/seq2seq_sber_beam5_ranker.jsonl
+        outs:
+            - predictions/seq2seq_sber_beam5_ranker.txt
+
+    predict_seq2seq_sber:
+        cmd:
+            - mkdir -p predictions
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
+                --input-file data/seq2seq_test.jsonl
+                --output-file predictions/seq2seq_sber.jsonl
+                --model-name models/sber_rut5_detox
+                --num-beams 5
+                --num-return-sequences 1
+                --batch-size 2
+        deps:
+            - rudetox/seq2seq/predict.py
+            - models/sber_rut5_detox
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/seq2seq_sber.jsonl
+
+    to_plain_seq2seq_sber:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/seq2seq_sber.jsonl
+                predictions/seq2seq_sber.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/seq2seq_sber.jsonl
+        outs:
+            - predictions/seq2seq_sber.txt
 
     train_seq2seq_orig:
         cmd:
@@ -214,7 +265,7 @@ stages:
         outs:
             - models/orig_rut5_detox
 
-    predict_seq2seq_orig:
+    predict_seq2seq_orig_beam:
         cmd:
             - mkdir -p predictions
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
@@ -227,13 +278,64 @@ stages:
         deps:
             - rudetox/seq2seq/predict.py
             - models/orig_rut5_detox
-            - models/rubertconv_toxic_clf
-            - models/fluency
-            - models/sim
-            - configs/ranker.json
             - data/seq2seq_test.jsonl
         outs:
             - predictions/seq2seq_orig_beam5.jsonl
+
+    rank_seq2seq_orig_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
+                predictions/seq2seq_orig_beam5.jsonl
+                predictions/seq2seq_orig_beam5_ranker.jsonl
+                --config-path configs/ranker.json
+        deps:
+            - rudetox/ranker.py
+            - configs/ranker.json
+            - models/rubertconv_toxic_clf
+            - models/fluency
+            - models/sim
+            - predictions/seq2seq_orig_beam5.jsonl
+        outs:
+            - predictions/seq2seq_orig_beam5_ranker.jsonl
+
+    to_plain_seq2seq_orig_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/seq2seq_orig_beam5_ranker.jsonl
+                predictions/seq2seq_orig_beam5_ranker.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/seq2seq_orig_beam5_ranker.jsonl
+        outs:
+            - predictions/seq2seq_orig_beam5_ranker.txt
+
+    predict_seq2seq_orig:
+        cmd:
+            - mkdir -p predictions
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict
+                --input-file data/seq2seq_test.jsonl
+                --output-file predictions/seq2seq_orig.jsonl
+                --model-name models/orig_rut5_detox
+                --num-beams 5
+                --num-return-sequences 1
+                --batch-size 2
+        deps:
+            - rudetox/seq2seq/predict.py
+            - models/orig_rut5_detox
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/seq2seq_orig.jsonl
+
+    to_plain_seq2seq_orig:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/seq2seq_orig.jsonl
+                predictions/seq2seq_orig.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/seq2seq_orig.jsonl
+        outs:
+            - predictions/seq2seq_orig.txt
 
     sample_toxic:
         cmd:
@@ -258,24 +360,6 @@ stages:
             - data/clf_all.jsonl
         outs:
             - data/neutral.jsonl
-
-    train_nontoxic_mlm_sber:
-        cmd:
-            - mkdir -p models
-            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train_mlm
-                --config-path configs/sber_rut5_nontoxic_mlm.json
-                --input-path data/nontoxic.jsonl
-                --text-field text
-                --out-dir models/sber_rut5_nontoxic_mlm
-                --override-base-model models/sber_rut5_base
-            - rm -rf models/sber_rut5_nontoxic_mlm/checkpoint*
-        deps:
-            - rudetox/seq2seq/train_mlm.py
-            - configs/sber_rut5_nontoxic_mlm.json
-            - data/nontoxic.jsonl
-            - models/sber_rut5_base
-        outs:
-            - models/sber_rut5_nontoxic_mlm
 
     train_marker:
         cmd:
@@ -324,3 +408,169 @@ stages:
             - models/orig_rut5_base
         outs:
             - models/orig_rut5_filler
+
+    predict_lewis_orig:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
+                --tagger-model-name models/rubertconv_toxic_marker
+                --gen-model-name models/orig_rut5_filler
+                --input-path data/seq2seq_test.jsonl
+                --text-field source
+                --output-path predictions/lewis_orig.jsonl
+                --num-beams 5
+                --num-return-sequences 1
+        deps:
+            - rudetox/marker/predict.py
+            - models/rubertconv_toxic_marker
+            - models/orig_rut5_filler
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/lewis_orig.jsonl
+
+    to_plain_lewis_orig:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/lewis_orig.jsonl
+                predictions/lewis_orig.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/lewis_orig.jsonl
+        outs:
+            - predictions/lewis_orig.txt
+
+    predict_lewis_orig_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
+                --tagger-model-name models/rubertconv_toxic_marker
+                --gen-model-name models/orig_rut5_filler
+                --input-path data/seq2seq_test.jsonl
+                --text-field source
+                --output-path predictions/lewis_orig_beam5.jsonl
+                --num-beams 5
+                --num-return-sequences 5
+        deps:
+            - rudetox/marker/predict.py
+            - models/rubertconv_toxic_marker
+            - models/orig_rut5_filler
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/lewis_orig_beam5.jsonl
+
+    rank_lewis_orig_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
+                predictions/lewis_orig_beam5.jsonl
+                predictions/lewis_orig_beam5_ranker.jsonl
+                --config-path configs/ranker.json
+        deps:
+            - rudetox/ranker.py
+            - configs/ranker.json
+            - models/rubertconv_toxic_clf
+            - models/fluency
+            - models/sim
+            - predictions/lewis_orig_beam5.jsonl
+        outs:
+            - predictions/lewis_orig_beam5_ranker.jsonl
+
+    to_plain_lewis_orig_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/lewis_orig_beam5_ranker.jsonl
+                predictions/lewis_orig_beam5_ranker.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/lewis_orig_beam5_ranker.jsonl
+        outs:
+            - predictions/lewis_orig_beam5_ranker.txt
+
+    train_filler_sber:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/sber_rut5_filler.json
+                --train-path data/marker_train.jsonl
+                --val-path data/marker_val.jsonl
+                --override-base-model models/sber_rut5_base
+                --out-dir models/sber_rut5_filler
+            - rm -rf models/sber_rut5_filler/checkpoint*
+        deps:
+            - rudetox/seq2seq/train.py
+            - data/marker_train.jsonl
+            - data/marker_val.jsonl
+            - models/sber_rut5_base
+        outs:
+            - models/sber_rut5_filler
+
+    predict_lewis_sber:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
+                --tagger-model-name models/rubertconv_toxic_marker
+                --gen-model-name models/sber_rut5_filler
+                --input-path data/seq2seq_test.jsonl
+                --text-field source
+                --output-path predictions/lewis_sber.jsonl
+                --num-beams 5
+                --num-return-sequences 1
+        deps:
+            - rudetox/marker/predict.py
+            - models/rubertconv_toxic_marker
+            - models/sber_rut5_filler
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/lewis_sber.jsonl
+
+    to_plain_lewis_sber:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/lewis_sber.jsonl
+                predictions/lewis_sber.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/lewis_sber.jsonl
+        outs:
+            - predictions/lewis_sber.txt
+
+    predict_lewis_sber_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
+                --tagger-model-name models/rubertconv_toxic_marker
+                --gen-model-name models/sber_rut5_filler
+                --input-path data/seq2seq_test.jsonl
+                --text-field source
+                --output-path predictions/lewis_sber_beam5.jsonl
+                --num-beams 5
+                --num-return-sequences 5
+        deps:
+            - rudetox/marker/predict.py
+            - models/rubertconv_toxic_marker
+            - models/sber_rut5_filler
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/lewis_sber_beam5.jsonl
+
+    rank_lewis_sber_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker
+                predictions/lewis_sber_beam5.jsonl
+                predictions/lewis_sber_beam5_ranker.jsonl
+                --config-path configs/ranker.json
+        deps:
+            - rudetox/ranker.py
+            - configs/ranker.json
+            - models/rubertconv_toxic_clf
+            - models/fluency
+            - models/sim
+            - predictions/lewis_sber_beam5.jsonl
+        outs:
+            - predictions/lewis_sber_beam5_ranker.jsonl
+
+    to_plain_lewis_sber_beam:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain
+                predictions/lewis_sber_beam5_ranker.jsonl
+                predictions/lewis_sber_beam5_ranker.txt
+        deps:
+            - rudetox/to_plain.py
+            - predictions/lewis_sber_beam5_ranker.jsonl
+        outs:
+            - predictions/lewis_sber_beam5_ranker.txt

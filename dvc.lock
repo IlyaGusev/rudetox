@@ -755,38 +755,23 @@ stages:
     cmd:
     - mkdir -p predictions
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict --input-file data/seq2seq_test.jsonl
-      --output-file predictions/seq2seq_sber_beam5.jsonl --model-name models/sber_rut5_detox
-      --num-beams 5 --num-return-sequences 5 --batch-size 2
+      --output-file predictions/seq2seq_sber.jsonl --model-name models/sber_rut5_detox
+      --num-beams 5 --num-return-sequences 1 --batch-size 2
     deps:
-    - path: configs/ranker.json
-      md5: 6654c2319a0830db756adbe011589180
-      size: 238
     - path: data/seq2seq_test.jsonl
       md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
       size: 116698
-    - path: models/fluency
-      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
-      size: 1429163290
-      nfiles: 8
-    - path: models/rubertconv_toxic_clf
-      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
-      size: 715113322
-      nfiles: 6
     - path: models/sber_rut5_detox
       md5: 4a29984d7214f7385336bc767122676d.dir
       size: 894340443
       nfiles: 6
-    - path: models/sim
-      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
-      size: 1032948918
-      nfiles: 7
     - path: rudetox/seq2seq/predict.py
       md5: e95927b83a8eb990408b8e5b3013938b
       size: 4469
     outs:
-    - path: predictions/seq2seq_sber_beam5.jsonl
-      md5: 628e8e694fe38d64b7c3a4d20313b321
-      size: 1099879
+    - path: predictions/seq2seq_sber.jsonl
+      md5: 028cd9a70f951885dd3ee3796caae442
+      size: 219329
   train_seq2seq_orig:
     cmd:
     - mkdir -p models
@@ -820,38 +805,23 @@ stages:
     cmd:
     - mkdir -p predictions
     - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict --input-file data/seq2seq_test.jsonl
-      --output-file predictions/seq2seq_orig_beam5.jsonl --model-name models/orig_rut5_detox
-      --num-beams 5 --num-return-sequences 5 --batch-size 2
+      --output-file predictions/seq2seq_orig.jsonl --model-name models/orig_rut5_detox
+      --num-beams 5 --num-return-sequences 1 --batch-size 2
     deps:
-    - path: configs/ranker.json
-      md5: 6654c2319a0830db756adbe011589180
-      size: 238
     - path: data/seq2seq_test.jsonl
       md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
       size: 116698
-    - path: models/fluency
-      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
-      size: 1429163290
-      nfiles: 8
     - path: models/orig_rut5_detox
       md5: 5d2023193a43f59a52d3f5a62b1e4eb3.dir
       size: 979502737
       nfiles: 6
-    - path: models/rubertconv_toxic_clf
-      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
-      size: 715113322
-      nfiles: 6
-    - path: models/sim
-      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
-      size: 1032948918
-      nfiles: 7
     - path: rudetox/seq2seq/predict.py
       md5: e95927b83a8eb990408b8e5b3013938b
       size: 4469
     outs:
-    - path: predictions/seq2seq_orig_beam5.jsonl
-      md5: 4573580163449e9df66ba2e7153c80e6
-      size: 1107641
+    - path: predictions/seq2seq_orig.jsonl
+      md5: 4abbd56b60e4b810ad55bb76155c724b
+      size: 220881
   train_nontoxic_mlm_sber:
     cmd:
     - mkdir -p models
@@ -904,3 +874,471 @@ stages:
       md5: 5e9df6b1055e809b83d3eb1415c82c00.dir
       size: 979502737
       nfiles: 6
+  rank_seq2seq_orig:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker predictions/seq2seq_orig_beam5.jsonl
+      predictions/seq2seq_orig_beam5_ranker.jsonl --config-path configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 73a9352e42ad83a1bc71ccce532f62ca
+      size: 235
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
+      size: 715113322
+      nfiles: 6
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: predictions/seq2seq_orig_beam5.jsonl
+      md5: 4573580163449e9df66ba2e7153c80e6
+      size: 1107641
+    - path: rudetox/ranker.py
+      md5: cb93ecb1d12ffc5c04241eeb189dec3b
+      size: 5952
+    outs:
+    - path: predictions/seq2seq_orig_beam5_ranker.jsonl
+      md5: 210ac373cf6236924a624ba34b3d2c0c
+      size: 484696
+  rank_seq2seq_sber:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker predictions/seq2seq_sber_beam5.jsonl
+      predictions/seq2seq_sber_beam5_ranker.jsonl --config-path configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 73a9352e42ad83a1bc71ccce532f62ca
+      size: 235
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
+      size: 715113322
+      nfiles: 6
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: predictions/seq2seq_sber_beam5.jsonl
+      md5: 628e8e694fe38d64b7c3a4d20313b321
+      size: 1099879
+    - path: rudetox/ranker.py
+      md5: cb93ecb1d12ffc5c04241eeb189dec3b
+      size: 5952
+    outs:
+    - path: predictions/seq2seq_sber_beam5_ranker.jsonl
+      md5: 85497c754b05576a97c4bd80e70a51f1
+      size: 484464
+  to_plain_seq2seq_orig:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/seq2seq_orig.jsonl
+      predictions/seq2seq_orig.txt
+    deps:
+    - path: predictions/seq2seq_orig.jsonl
+      md5: 4abbd56b60e4b810ad55bb76155c724b
+      size: 220881
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/seq2seq_orig.txt
+      md5: e70ba54ef1370556a3fe477adf23f575
+      size: 92808
+  train_filler_sber:
+    cmd:
+    - mkdir -p models
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train --config-path configs/sber_rut5_filler.json
+      --train-path data/marker_train.jsonl --val-path data/marker_val.jsonl --override-base-model
+      models/sber_rut5_base --out-dir models/sber_rut5_filler
+    - rm -rf models/sber_rut5_filler/checkpoint*
+    deps:
+    - path: data/marker_train.jsonl
+      md5: fb604c8b84629aaa501ed746696dad14
+      size: 9103024
+    - path: data/marker_val.jsonl
+      md5: f5c7fd33bd506584554c8fe4066ceafb
+      size: 899860
+    - path: models/sber_rut5_base
+      md5: 55b9f4dd25232b66679eac6599c954cd.dir
+      size: 1785504758
+      nfiles: 5
+    - path: rudetox/seq2seq/train.py
+      md5: 5aa055a315623f3dac2c625752d7dcbe
+      size: 5803
+    outs:
+    - path: models/sber_rut5_filler
+      md5: 768a32d0fc81c7ea6859b5f16a39ba90.dir
+      size: 894340443
+      nfiles: 6
+  to_plain_seq2seq_sber:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/seq2seq_sber.jsonl
+      predictions/seq2seq_sber.txt
+    deps:
+    - path: predictions/seq2seq_sber.jsonl
+      md5: 028cd9a70f951885dd3ee3796caae442
+      size: 219329
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/seq2seq_sber.txt
+      md5: 9e6cacf7076e4bb6136644720bf0d3ca
+      size: 91256
+  predict_lewis_sber_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict --tagger-model-name
+      models/rubertconv_toxic_marker --gen-model-name models/sber_rut5_filler --input-path
+      data/seq2seq_test.jsonl --text-field source --output-path predictions/lewis_sber_beam5.jsonl
+      --num-beams 5 --num-return-sequences 5
+    deps:
+    - path: data/seq2seq_test.jsonl
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
+    - path: models/rubertconv_toxic_marker
+      md5: c00bda9f641d8caba50cf06f8fee5845.dir
+      size: 712756416
+      nfiles: 6
+    - path: models/sber_rut5_filler
+      md5: 768a32d0fc81c7ea6859b5f16a39ba90.dir
+      size: 894340443
+      nfiles: 6
+    - path: rudetox/marker/predict.py
+      md5: cea596cc5b1f899d7fe37083b698e1a9
+      size: 5025
+    outs:
+    - path: predictions/lewis_sber_beam5.jsonl
+      md5: f902acd4980058f16e4681a0eb9e5d67
+      size: 1547270
+  rank_lewis_sber_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker predictions/lewis_sber_beam5.jsonl
+      predictions/lewis_sber_beam5_ranker.jsonl --config-path configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 73a9352e42ad83a1bc71ccce532f62ca
+      size: 235
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
+      size: 715113322
+      nfiles: 6
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: predictions/lewis_sber_beam5.jsonl
+      md5: f902acd4980058f16e4681a0eb9e5d67
+      size: 1547270
+    - path: rudetox/ranker.py
+      md5: cb93ecb1d12ffc5c04241eeb189dec3b
+      size: 5952
+    outs:
+    - path: predictions/lewis_sber_beam5_ranker.jsonl
+      md5: 2ab0ae264908862a87e8bb8da4194051
+      size: 484336
+  rank_seq2seq_sber_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker predictions/seq2seq_sber_beam5.jsonl
+      predictions/seq2seq_sber_beam5_ranker.jsonl --config-path configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 73a9352e42ad83a1bc71ccce532f62ca
+      size: 235
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
+      size: 715113322
+      nfiles: 6
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: predictions/seq2seq_sber_beam5.jsonl
+      md5: 628e8e694fe38d64b7c3a4d20313b321
+      size: 1099879
+    - path: rudetox/ranker.py
+      md5: cb93ecb1d12ffc5c04241eeb189dec3b
+      size: 5952
+    outs:
+    - path: predictions/seq2seq_sber_beam5_ranker.jsonl
+      md5: 85497c754b05576a97c4bd80e70a51f1
+      size: 484464
+  rank_seq2seq_orig_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker predictions/seq2seq_orig_beam5.jsonl
+      predictions/seq2seq_orig_beam5_ranker.jsonl --config-path configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 73a9352e42ad83a1bc71ccce532f62ca
+      size: 235
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
+      size: 715113322
+      nfiles: 6
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: predictions/seq2seq_orig_beam5.jsonl
+      md5: 4573580163449e9df66ba2e7153c80e6
+      size: 1107641
+    - path: rudetox/ranker.py
+      md5: cb93ecb1d12ffc5c04241eeb189dec3b
+      size: 5952
+    outs:
+    - path: predictions/seq2seq_orig_beam5_ranker.jsonl
+      md5: 210ac373cf6236924a624ba34b3d2c0c
+      size: 484696
+  to_plain_lewis_sber_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/lewis_sber_beam5_ranker.jsonl
+      predictions/lewis_sber_beam5_ranker.txt
+    deps:
+    - path: predictions/lewis_sber_beam5_ranker.jsonl
+      md5: 2ab0ae264908862a87e8bb8da4194051
+      size: 484336
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/lewis_sber_beam5_ranker.txt
+      md5: c6e89c03e2b4023d5a70719e5cfe6595
+      size: 93515
+  to_plain_seq2seq_sber_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/seq2seq_sber_beam5_ranker.jsonl
+      predictions/seq2seq_sber_beam5_ranker.txt
+    deps:
+    - path: predictions/seq2seq_sber_beam5_ranker.jsonl
+      md5: 85497c754b05576a97c4bd80e70a51f1
+      size: 484464
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/seq2seq_sber_beam5_ranker.txt
+      md5: 41189c1ca7e55e027016076ff6c926b2
+      size: 92387
+  to_plain_seq2seq_orig_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/seq2seq_orig_beam5_ranker.jsonl
+      predictions/seq2seq_orig_beam5_ranker.txt
+    deps:
+    - path: predictions/seq2seq_orig_beam5_ranker.jsonl
+      md5: 210ac373cf6236924a624ba34b3d2c0c
+      size: 484696
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/seq2seq_orig_beam5_ranker.txt
+      md5: a09bab128c124e958c381c8c1c186c31
+      size: 93798
+  predict_lewis_orig_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict --tagger-model-name
+      models/rubertconv_toxic_marker --gen-model-name models/orig_rut5_filler --input-path
+      data/seq2seq_test.jsonl --text-field source --output-path predictions/lewis_orig_beam5.jsonl
+      --num-beams 5 --num-return-sequences 5
+    deps:
+    - path: data/seq2seq_test.jsonl
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
+    - path: models/orig_rut5_filler
+      md5: 5e9df6b1055e809b83d3eb1415c82c00.dir
+      size: 979502737
+      nfiles: 6
+    - path: models/rubertconv_toxic_marker
+      md5: c00bda9f641d8caba50cf06f8fee5845.dir
+      size: 712756416
+      nfiles: 6
+    - path: rudetox/marker/predict.py
+      md5: cea596cc5b1f899d7fe37083b698e1a9
+      size: 5025
+    outs:
+    - path: predictions/lewis_orig_beam5.jsonl
+      md5: 2426ce20f820f71f73f1db838a7f6134
+      size: 1556487
+  rank_lewis_orig_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.ranker predictions/lewis_orig_beam5.jsonl
+      predictions/lewis_orig_beam5_ranker.jsonl --config-path configs/ranker.json
+    deps:
+    - path: configs/ranker.json
+      md5: 73a9352e42ad83a1bc71ccce532f62ca
+      size: 235
+    - path: models/fluency
+      md5: b87680d0b29abad2d1d6e86b7a069c11.dir
+      size: 1429163290
+      nfiles: 8
+    - path: models/rubertconv_toxic_clf
+      md5: 65d6dc646a18c98e46f2b2041c341d26.dir
+      size: 715113322
+      nfiles: 6
+    - path: models/sim
+      md5: 8ce77c006f00d3b556b7fe56ea996ef2.dir
+      size: 1032948918
+      nfiles: 7
+    - path: predictions/lewis_orig_beam5.jsonl
+      md5: 2426ce20f820f71f73f1db838a7f6134
+      size: 1556487
+    - path: rudetox/ranker.py
+      md5: cb93ecb1d12ffc5c04241eeb189dec3b
+      size: 5952
+    outs:
+    - path: predictions/lewis_orig_beam5_ranker.jsonl
+      md5: 01a3177f3abd239857b6a04c2d941ffb
+      size: 485540
+  to_plain_lewis_orig_beam:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/lewis_orig_beam5_ranker.jsonl
+      predictions/lewis_orig_beam5_ranker.txt
+    deps:
+    - path: predictions/lewis_orig_beam5_ranker.jsonl
+      md5: 01a3177f3abd239857b6a04c2d941ffb
+      size: 485540
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/lewis_orig_beam5_ranker.txt
+      md5: 1f59cb61fcf4461ae2c5f4b63af02187
+      size: 94350
+  predict_lewis_orig:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict --tagger-model-name
+      models/rubertconv_toxic_marker --gen-model-name models/orig_rut5_filler --input-path
+      data/seq2seq_test.jsonl --text-field source --output-path predictions/lewis_orig.jsonl
+      --num-beams 5 --num-return-sequences 1
+    deps:
+    - path: data/seq2seq_test.jsonl
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
+    - path: models/orig_rut5_filler
+      md5: 5e9df6b1055e809b83d3eb1415c82c00.dir
+      size: 979502737
+      nfiles: 6
+    - path: models/rubertconv_toxic_marker
+      md5: c00bda9f641d8caba50cf06f8fee5845.dir
+      size: 712756416
+      nfiles: 6
+    - path: rudetox/marker/predict.py
+      md5: cea596cc5b1f899d7fe37083b698e1a9
+      size: 5025
+    outs:
+    - path: predictions/lewis_orig.jsonl
+      md5: 19e9db58f448e55b6eb78bce5d3165af
+      size: 371065
+  predict_lewis_sber:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict --tagger-model-name
+      models/rubertconv_toxic_marker --gen-model-name models/sber_rut5_filler --input-path
+      data/seq2seq_test.jsonl --text-field source --output-path predictions/lewis_sber.jsonl
+      --num-beams 5 --num-return-sequences 1
+    deps:
+    - path: data/seq2seq_test.jsonl
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
+    - path: models/rubertconv_toxic_marker
+      md5: c00bda9f641d8caba50cf06f8fee5845.dir
+      size: 712756416
+      nfiles: 6
+    - path: models/sber_rut5_filler
+      md5: 768a32d0fc81c7ea6859b5f16a39ba90.dir
+      size: 894340443
+      nfiles: 6
+    - path: rudetox/marker/predict.py
+      md5: cea596cc5b1f899d7fe37083b698e1a9
+      size: 5025
+    outs:
+    - path: predictions/lewis_sber.jsonl
+      md5: fa047c10991de78a555154ab700b75a8
+      size: 369908
+  to_plain_lewis_sber:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/lewis_sber.jsonl
+      predictions/lewis_sber.txt
+    deps:
+    - path: predictions/lewis_sber.jsonl
+      md5: fa047c10991de78a555154ab700b75a8
+      size: 369908
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/lewis_sber.txt
+      md5: c652988312d02d10293896bdc7d1b662
+      size: 91300
+  to_plain_lewis_orig:
+    cmd:
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.to_plain predictions/lewis_orig.jsonl
+      predictions/lewis_orig.txt
+    deps:
+    - path: predictions/lewis_orig.jsonl
+      md5: 19e9db58f448e55b6eb78bce5d3165af
+      size: 371065
+    - path: rudetox/to_plain.py
+      md5: 3385583237eaff6f21301cd899b6e65e
+      size: 237
+    outs:
+    - path: predictions/lewis_orig.txt
+      md5: 596f4ce5bc2d677e2d1e32889e517307
+      size: 91553
+  predict_seq2seq_sber_beam:
+    cmd:
+    - mkdir -p predictions
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict --input-file data/seq2seq_test.jsonl
+      --output-file predictions/seq2seq_sber_beam5.jsonl --model-name models/sber_rut5_detox
+      --num-beams 5 --num-return-sequences 5 --batch-size 2
+    deps:
+    - path: data/seq2seq_test.jsonl
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
+    - path: models/sber_rut5_detox
+      md5: 4a29984d7214f7385336bc767122676d.dir
+      size: 894340443
+      nfiles: 6
+    - path: rudetox/seq2seq/predict.py
+      md5: e95927b83a8eb990408b8e5b3013938b
+      size: 4469
+    outs:
+    - path: predictions/seq2seq_sber_beam5.jsonl
+      md5: 628e8e694fe38d64b7c3a4d20313b321
+      size: 1099879
+  predict_seq2seq_orig_beam:
+    cmd:
+    - mkdir -p predictions
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.predict --input-file data/seq2seq_test.jsonl
+      --output-file predictions/seq2seq_orig_beam5.jsonl --model-name models/orig_rut5_detox
+      --num-beams 5 --num-return-sequences 5 --batch-size 2
+    deps:
+    - path: data/seq2seq_test.jsonl
+      md5: c81c4f9dd2aaf17a53cbaa34c0f396b5
+      size: 116698
+    - path: models/orig_rut5_detox
+      md5: 5d2023193a43f59a52d3f5a62b1e4eb3.dir
+      size: 979502737
+      nfiles: 6
+    - path: rudetox/seq2seq/predict.py
+      md5: e95927b83a8eb990408b8e5b3013938b
+      size: 4469
+    outs:
+    - path: predictions/seq2seq_orig_beam5.jsonl
+      md5: 4573580163449e9df66ba2e7153c80e6
+      size: 1107641
