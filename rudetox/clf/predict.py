@@ -24,9 +24,11 @@ def main(
 
     test_records = list(read_jsonl(test_path, sample_rate))
     test_records = [r for r in test_records if r["agreement"] > 0.7]
+    text_records = list({r["text"]: r for r in test_records}.values())
+
     pipe = pipeline("text-classification", model=model, tokenizer=tokenizer, framework="pt", device=device_num)
     y_pred, scores = pipe_predict([r["text"][:512] for r in test_records], pipe)
-    y_true = [r["label"] for r in test_records]
+    y_true = [int(r["result"] == "toxic") for r in test_records]
 
     print("Errors:")
     print("Label 1:")

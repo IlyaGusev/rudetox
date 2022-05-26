@@ -12,6 +12,7 @@ BAD_VOCAB_PATH="data/bad_vocab.txt"
 TRAIN_GEN_PATH="data/seq2seq_gen_train.jsonl"
 VAL_GEN_PATH="data/seq2seq_gen_val.jsonl"
 GEN_PATH="data/seq2seq_gen.jsonl"
+FINAL_PATH="data/final"
 
 mkdir -p data;
 
@@ -50,6 +51,11 @@ rm -rf TlkPersonaChatRus data/TlkPersonaChatRus.zip;
 wget https://raw.githubusercontent.com/Koziev/NLP_Datasets/master/Conversations/Data/dialogues.zip -O data/dialogues.zip
 unzip data/dialogues.zip && mv dialogues.txt $KOZIEV_PATH && rm -rf data/dialogues.zip;
 
+# Final dataset for clf
+mkdir -p $FINAL_PATH
+wget https://www.dropbox.com/s/a7mwe74w2a7rzm0/clf_data.tar.gz -O $FINAL_PATH/clf_data.tar.gz
+cd $FINAL_PATH && tar -xzvf clf_data.tar.gz
+
 echo "Detox train: $DETOX_TRAIN_PATH";
 echo "Detox val: $DETOX_VAL_PATH";
 echo "Detox test: $DETOX_TEST_PATH";
@@ -57,3 +63,4 @@ echo "Vocab: $BAD_VOCAB_PATH";
 echo "2ch/Pikabu: $CH_PATH";
 echo "Odnoklassniki: $OK_PATH";
 echo "Toloka Persona: $PERSONA_PATH";
+echo "Final dataset: $FINAL_PATH";

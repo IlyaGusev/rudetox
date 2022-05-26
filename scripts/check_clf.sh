@@ -46,7 +46,7 @@ fi
 
 
 
-TEST_FILE="data/clf_test.jsonl";
+TEST_FILE="data/final/clf_test.jsonl";
 VOCAB_FILE="data/bad_vocab.txt";
 
 CUDA_VISIBLE_DEVICES=0 python3.9 -m rudetox.clf.check \

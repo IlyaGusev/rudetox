@@ -99,7 +99,11 @@ def main(
     input_fields = input_fields.split(",")
 
     toloka_client = toloka.TolokaClient(read_token(token_path), 'PRODUCTION')
-    pool_ids = [int(pid) for pid in pools.split(",")]
+    if pools.endswith(".txt"):
+        with open(pools) as r:
+            pool_ids = [int(line.strip()) for line in r]
+    else:
+        pool_ids = [int(pid) for pid in pools.split(",")]
 
     records = []
     for pool_id in pool_ids:
