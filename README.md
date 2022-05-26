@@ -23,20 +23,14 @@ dvc repro prepare_clf_dataset
 dvc repro prepare_seq2seq_dataset
 ```
 
-Запуск обучения классификатора:
+Запуск всего:
 ```
-dvc repro train_clf
-```
-
-Запуск обучения T5:
-```
-dvc repro train_seq2seq
+dvc repro
 ```
 
 
 ## Модели
 
-* Классификатор: https://huggingface.co/MindfulSquirrel/rubertconv_toxic_clf
-* RuT5 detox: https://huggingface.co/MindfulSquirrel/rut5_detox
-* RuT5 tox: https://huggingface.co/MindfulSquirrel/rut5_tox
-* Фломастер: https://huggingface.co/MindfulSquirrel/rubertconv_toxic_marker
+* Классификатор: https://huggingface.co/IlyaGusev/rubertconv_toxic_clf
+* Фломастер: https://huggingface.co/IlyaGusev/rubertconv_toxic_editor
+* Контекстный заполнятель пропусков: https://huggingface.co/IlyaGusev/sber_rut5_filler
