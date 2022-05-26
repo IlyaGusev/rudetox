@@ -87,6 +87,7 @@ stages:
             - data/koziev.txt
             - data/bad_vocab.txt
             - configs/augmentations.json
+            - models/sim
         outs:
             - data/clf_all.jsonl
             - data/clf_train.jsonl
@@ -501,6 +502,24 @@ stages:
         outs:
             - models/sber_rut5_filler
 
+    train_filler_sber_large:
+        cmd:
+            - mkdir -p models
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train
+                --config-path configs/sber_large_rut5_filler.json
+                --train-path data/marker_train.jsonl
+                --val-path data/marker_val.jsonl
+                --override-base-model models/sber_rut5_base
+                --out-dir models/sber_large_rut5_filler
+            - rm -rf models/sber_large_rut5_filler/checkpoint*
+        deps:
+            - rudetox/seq2seq/train.py
+            - data/marker_train.jsonl
+            - data/marker_val.jsonl
+            - models/sber_rut5_base
+        outs:
+            - models/sber_large_rut5_filler
+
     predict_lewis_sber:
         cmd:
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
@@ -518,6 +537,25 @@ stages:
             - data/seq2seq_test.jsonl
         outs:
             - predictions/lewis_sber.jsonl
+
+    predict_lewis_sber_large:
+        cmd:
+            - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
+                --tagger-model-name models/rubertconv_toxic_marker
+                --gen-model-name models/sber_rut5_large_filler
+                --input-path data/seq2seq_test.jsonl
+                --text-field source
+                --output-path predictions/lewis_sber_large.jsonl
+                --num-beams 5
+                --num-return-sequences 1
+        deps:
+            - rudetox/marker/predict.py
+            - models/rubertconv_toxic_marker
+            - models/sber_rut5_large_filler
+            - data/seq2seq_test.jsonl
+        outs:
+            - predictions/lewis_sber_large.jsonl
+
 
     to_plain_lewis_sber:
         cmd:

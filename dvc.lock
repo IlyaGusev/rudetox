@@ -211,8 +211,8 @@ stages:
     cmd: bash scripts/download_datasets.sh
     deps:
     - path: scripts/download_datasets.sh
-      md5: 4c253c257eedd8504dc0665a3b0500eb
-      size: 2590
+      md5: 9b8d9b12e3bee610e37cdae5fd3da542
+      size: 2833
     outs:
     - path: data/2ch.csv
       md5: e04d99ca44f5172ade13997ce09f3aea
@@ -1009,8 +1009,8 @@ stages:
       size: 894340443
       nfiles: 6
     - path: rudetox/marker/predict.py
-      md5: cea596cc5b1f899d7fe37083b698e1a9
-      size: 5025
+      md5: 5f3d984521cbb9aaf4913ccea4576eee
+      size: 5141
     outs:
     - path: predictions/lewis_sber_beam5.jsonl
       md5: f902acd4980058f16e4681a0eb9e5d67
@@ -1169,8 +1169,8 @@ stages:
       size: 712756416
       nfiles: 6
     - path: rudetox/marker/predict.py
-      md5: cea596cc5b1f899d7fe37083b698e1a9
-      size: 5025
+      md5: 5f3d984521cbb9aaf4913ccea4576eee
+      size: 5141
     outs:
     - path: predictions/lewis_orig_beam5.jsonl
       md5: 2426ce20f820f71f73f1db838a7f6134
@@ -1239,8 +1239,8 @@ stages:
       size: 712756416
       nfiles: 6
     - path: rudetox/marker/predict.py
-      md5: cea596cc5b1f899d7fe37083b698e1a9
-      size: 5025
+      md5: 5f3d984521cbb9aaf4913ccea4576eee
+      size: 5141
     outs:
     - path: predictions/lewis_orig.jsonl
       md5: 19e9db58f448e55b6eb78bce5d3165af
@@ -1264,8 +1264,8 @@ stages:
       size: 894340443
       nfiles: 6
     - path: rudetox/marker/predict.py
-      md5: cea596cc5b1f899d7fe37083b698e1a9
-      size: 5025
+      md5: 5f3d984521cbb9aaf4913ccea4576eee
+      size: 5141
     outs:
     - path: predictions/lewis_sber.jsonl
       md5: fa047c10991de78a555154ab700b75a8
@@ -1342,3 +1342,29 @@ stages:
     - path: predictions/seq2seq_orig_beam5.jsonl
       md5: 4573580163449e9df66ba2e7153c80e6
       size: 1107641
+  train_filler_sber_large:
+    cmd:
+    - mkdir -p models
+    - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.seq2seq.train --config-path configs/sber_large_rut5_filler.json
+      --train-path data/marker_train.jsonl --val-path data/marker_val.jsonl --override-base-model
+      models/sber_rut5_base --out-dir models/sber_large_rut5_filler
+    - rm -rf models/sber_large_rut5_filler/checkpoint*
+    deps:
+    - path: data/marker_train.jsonl
+      md5: fb604c8b84629aaa501ed746696dad14
+      size: 9103024
+    - path: data/marker_val.jsonl
+      md5: f5c7fd33bd506584554c8fe4066ceafb
+      size: 899860
+    - path: models/sber_rut5_base
+      md5: 55b9f4dd25232b66679eac6599c954cd.dir
+      size: 1785504758
+      nfiles: 5
+    - path: rudetox/seq2seq/train.py
+      md5: 5aa055a315623f3dac2c625752d7dcbe
+      size: 5803
+    outs:
+    - path: models/sber_large_rut5_filler
+      md5: c4de08b85d1d028dae6ddc68f18a4738.dir
+      size: 894340443
+      nfiles: 6
