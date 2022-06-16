@@ -101,13 +101,14 @@ stages:
             - mkdir -p models
             - rm -rf models/sim models/fluency models/en_ru
                 models/ru_en models/rubertconv models/sber_rut5_base
-                models/orig_rut5_base
+                models/orig_rut5_base models/sber_rut5_large
             - git clone https://huggingface.co/cointegrated/LaBSE-en-ru models/sim
             - git clone https://huggingface.co/SkolkovoInstitute/rubert-base-corruption-detector models/fluency
             - git clone https://huggingface.co/facebook/wmt19-en-ru models/en_ru
             - git clone https://huggingface.co/facebook/wmt19-ru-en models/ru_en
             - git clone https://huggingface.co/DeepPavlov/rubert-base-cased-conversational models/rubertconv
             - git clone https://huggingface.co/sberbank-ai/ruT5-base models/sber_rut5_base
+            - git clone https://huggingface.co/sberbank-ai/ruT5-large models/sber_rut5_large
             - git clone https://huggingface.co/cointegrated/rut5-base models/orig_rut5_base
         outs:
             - models/sim
@@ -117,6 +118,7 @@ stages:
             - models/rubertconv
             - models/orig_rut5_base
             - models/sber_rut5_base
+            - models/sber_rut5_large
 
     train_clf:
         cmd:
@@ -509,14 +511,14 @@ stages:
                 --config-path configs/sber_large_rut5_filler.json
                 --train-path data/marker_train.jsonl
                 --val-path data/marker_val.jsonl
-                --override-base-model models/sber_rut5_base
+                --override-base-model models/sber_rut5_large
                 --out-dir models/sber_large_rut5_filler
             - rm -rf models/sber_large_rut5_filler/checkpoint*
         deps:
             - rudetox/seq2seq/train.py
             - data/marker_train.jsonl
             - data/marker_val.jsonl
-            - models/sber_rut5_base
+            - models/sber_rut5_large
         outs:
             - models/sber_large_rut5_filler
 
@@ -542,7 +544,7 @@ stages:
         cmd:
             - CUDA_VISIBLE_DEVICES=0 python3 -m rudetox.marker.predict
                 --tagger-model-name models/rubertconv_toxic_marker
-                --gen-model-name models/sber_rut5_large_filler
+                --gen-model-name models/sber_large_rut5_filler
                 --input-path data/seq2seq_test.jsonl
                 --text-field source
                 --output-path predictions/lewis_sber_large.jsonl
@@ -551,7 +553,7 @@ stages:
         deps:
             - rudetox/marker/predict.py
             - models/rubertconv_toxic_marker
-            - models/sber_rut5_large_filler
+            - models/sber_large_rut5_filler
             - data/seq2seq_test.jsonl
         outs:
             - predictions/lewis_sber_large.jsonl
