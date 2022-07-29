@@ -34,3 +34,14 @@ dvc repro
 * Классификатор: https://huggingface.co/IlyaGusev/rubertconv_toxic_clf
 * Фломастер: https://huggingface.co/IlyaGusev/rubertconv_toxic_editor
 * Контекстный заполнятель пропусков: https://huggingface.co/IlyaGusev/sber_rut5_filler
+
+
+## Citations
+```bibtex
+@article{Gusev2022detox,
+    title={Russian Texts Detoxification with Levenshtein Editing},
+    author={Gusev, Ilya},
+    booktitle={Computational Linguistics and Intellectual Technologies},
+    year={2022}
+}
+```
