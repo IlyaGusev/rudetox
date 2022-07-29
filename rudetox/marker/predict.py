@@ -46,6 +46,7 @@ def main(
     predictions = tagger_pipe(texts, batch_size=1)
     #predictions = pipe_predict(texts, pipe)[0]
 
+    tagger_only_count = 0
     new_records = list()
     gen_model = AutoModelForSeq2SeqLM.from_pretrained(gen_model_name).to(device)
     gen_tokenizer = AutoTokenizer.from_pretrained(gen_model_name)
@@ -76,6 +77,7 @@ def main(
         print(template)
 
         if "extra_id" not in template:
+            tagger_only_count += 1
             record["target"] = template
             new_records.append(record)
             continue
@@ -118,6 +120,7 @@ def main(
             new_record["target"] = target
             new_records.append(new_record)
 
+    print("Tagger only: {}".format(tagger_only_count))
     write_jsonl(new_records, output_path)
 
 

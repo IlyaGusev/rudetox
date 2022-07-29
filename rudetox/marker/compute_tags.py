@@ -3,6 +3,7 @@ import string
 from collections import defaultdict
 from difflib import SequenceMatcher
 
+from tqdm.auto import tqdm
 from transformers import AutoTokenizer, BasicTokenizer
 
 from rudetox.util.io import read_jsonl, write_jsonl
@@ -113,7 +114,7 @@ def main(
 
     bad_records_count = 0
     filtered_records = []
-    for record in records:
+    for record in tqdm(records):
         source = record["source"]
         target = record["target"]
         source, target = preprocess_text(source), preprocess_text(target)
